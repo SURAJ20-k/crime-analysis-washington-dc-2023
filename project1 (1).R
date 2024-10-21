@@ -126,6 +126,34 @@ crime_data1 <- crime_data[
 nrow(crime_data1)
 
 
+# we are geeting the result numeric-0 so that means we don't have a null value in the data set. 
+# now 
+```
+```{r}
+
+# check duplicate values 
+# Ensure crime_data1 is a data frame
+crime_data1 <- as.data.frame(crime_data1)
+
+duplicate_crime_data <- crime_data1[duplicated(crime_data1), ]
+nrow(duplicate_crime_data)
+
+head(crime_data1)
+```
+so we don't have duplicate vlaues in the data set also . 
+ 
+ now our data set is net and clean . 
+ we are ready for the data transformation .
+ 
+ now we have to convert some rows of data in to some other formate beacuse of our need .
+ 
+ we some time trand=sform the solumns as according to our use of that data .
+```{r}
+
+head(crime_data1)
+crime_data1$REPORT_DAT <- as.Date(crime_data1$REPORT_DAT, formate="%m/%d/%Y")
+
+
 
 
 
