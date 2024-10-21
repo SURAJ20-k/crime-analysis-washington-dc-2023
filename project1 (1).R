@@ -92,6 +92,38 @@ head(crime_data)
 ```
 ```{r}
 
+sum(!is.na(crime_data$PSA))          # Check rows with PSA not missing
+sum(!is.na(crime_data$CENSUS_TRACT)) # Check rows with CENSUS_TRACT not missing
+sum(!is.na(crime_data$DISTRICT))     # Check rows with DISTRICT not missing
+sum(is.na(crime_data$WARD))          # Check rows with WARD missing
+
+
+
+
+
+```
+
+
+
+```{r}
+
+
+# we have to delete these null values , we had founded null from values ward , (census_tract) (geographical region ) , district,  psa (public safty areas )
+
+#  we have the geographical data as well as we got the null vlaues from the geographical data so we have to 
+#  delete it. it is appropriate for to delete and removing these small valmum from the data will not affect the 
+# data set. 
+
+
+
+crime_data1 <- crime_data[
+  !is.na(crime_data$PSA) & 
+    !is.na(crime_data$CENSUS_TRACT) & 
+    !is.na(crime_data$DISTRICT) 
+  , 
+]
+
+nrow(crime_data1)
 
 
 
