@@ -1,0 +1,1617 @@
+
+
+
+project - washigton_crime_report
+date-- 10-21-2024
+
+
+```{r}
+
+#1) load the data set 
+
+crime_data <- read.csv("C:/Users/DELL/Documents/GitHub/crime-analysis-washington-dc-2023/Crime_Incidents_in_2023.csv")
+
+
+
+cluster <- read.csv('C:/Users/DELL/Documents/GitHub/crime-analysis-washington-dc-2023/Neighborhood_Clusters.csv')
+
+library(dplyr)
+library(ezids)
+library(lubridate)
+library(tigris)
+library(tidycensus)
+library(ggthemes)
+library(ggplot2)
+library(sf)
+library(treemapify)
+library(gridExtra)
+head(cluster)
+cluster <- cluster %>% 
+  select(NAME, NBH_NAMES)
+
+
+# 2) load the require library 
+
+library(ggplot2)
+library(dplyr)
+
+
+library(lubridate) # fro thr data manupulation 
+
+library(sf)
+library(leaflet) 
+
+
+```
+
+
+
+
+```{r}
+# check the data structre 
+
+
+# dataset(data) is a data frame 
+# some time data set name is over written and we have to make sure that we have to 
+# convert that data set  in to data frame  
+
+crime_data <- as.data.frame(crime_data)
+
+
+
+str(crime_data)
+
+head(crime_data)
+
+```
+ from the is.null operator , we got that there is no record in the OCTO_RECORD_ID column 
+ 
+total 34215 records are missing from the records. 
+ 
+
+```{r}
+colnames(crime_data)
+
+colSums(is.na(crime_data))
+
+# duplicate check 
+
+
+duplicates <- crime_data[duplicated(crime_data), ]
+nrow(duplicates)
+
+head(crime_data)
+
+
+
+
+```
+```{r}
+
+sum(!is.na(crime_data$PSA))          # Check rows with PSA not missing
+sum(!is.na(crime_data$CENSUS_TRACT)) # Check rows with CENSUS_TRACT not missing
+sum(!is.na(crime_data$DISTRICT))     # Check rows with DISTRICT not missing
+sum(is.na(crime_data$WARD))          # Check rows with WARD missing
+
+```
+
+
+
+```{r}
+
+
+# we have to delete these null values , we had founded null from values ward , (census_tract) (geographical region ) , district,  psa (public safty areas )
+
+#  we have the geographical data as well as we got the null vlaues from the geographical data so we have to 
+#  delete it. it is appropriate for to delete and removing these small valmum from the data will not affect the 
+# data set. 
+
+
+
+crime_data1 <- crime_data[
+    !is.na(crime_data$PSA) & 
+    !is.na(crime_data$CENSUS_TRACT) & 
+    !is.na(crime_data$DISTRICT) 
+    , 
+]
+
+nrow(crime_data1)
+
+
+# we are geeting the result numeric-0 so that means we don't have a null value in the data set. 
+# now 
+```
+```{r}
+
+# check duplicate values 
+# Ensure crime_data1 is a data frame
+crime_data1 <- as.data.frame(crime_data1)
+
+duplicate_crime_data <- crime_data1[duplicated(crime_data1), ]
+nrow(duplicate_crime_data)
+
+head(crime_data1)
+```
+ so we don't have duplicate vlaues in the data set also . 
+ 
+ now our data set is net and clean . 
+ we are ready for the data transformation .
+ 
+ now we have to convert some rows of data in to some other formate beacuse of our need .
+ 
+ we some time trand=sform the solumns as according to our use of that data .
+```{r}
+
+crime_data1$REPORT_DAT <- as.Date(crime_data1$REPORT_DAT, formate="%m/%d/%Y")
+
+# extract the year and month also for future plots
+
+crime_data1$Year <- format(crime_data1$REPORT_DAT,"%Y")
+crime_data1$Month <- format(crime_data1$REPORT_DAT,"%m")
+
+head(crime_data1)
+
+```
+ 
+ we can see that , 2 new columns are added at the end of the all columns. now readjust columns, add these columns in the data frame after the REPOST_DAT. 
+ 
+ rearrange the columns and move the columns YEAR and Month after the report year .
+ 
+```{r}
+crime_data1 <- crime_data1 %>%
+    select(1:which(colnames(crime_data1) == "REPORT_DAT"), Year, Month, everything())
+
+head(crime_data1)
+str(crime_data1)
+```
+ 
+ 
+ Now we have to normalize the data set 
+ Beacuse 
+ 1) uniformality across the featurre- in the data set we have geo location data , date time data ,character data (shift ), numerical data(disctrict ) some pincode , so our data have SACLE  are drastically different , if we don;t normalize , some time anlalysis  will affect 
+ 
+ 2)  it will help in the improving  the speed in analysis 
+ 3) avoid the feature domination effect some feature are x, y co ordinate values are greater than the ward number , so to avioid these domination we have to noramzalise the data set . 
+ 
+ 
+```{r}
+# select the columns , on whcih we have to process the normalize the data. 
+
+# libriry "dplyr" require for the normalize the data . 
+
+# Select numerical columns that need to be normalized
+# Exclude categorical columns like OFFENSE, SHIFT, METHOD, etc.
+# Select only numeric columns that should be normalized
+numeric_columns <- crime_data1 %>%
+  select(X, Y, XBLOCK, YBLOCK, LATITUDE, LONGITUDE)  # Exclude WARD, DISTRICT, and PSA if they are categorical
+
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+# Apply normalization to the numeric columns
+normalized_numeric_columns <- as.data.frame(lapply(numeric_columns, normalize))
+
+# Add back the non-numeric columns to the normalized dataset
+crime_data2 <- bind_cols(crime_data1 %>% select(-X, -Y, -XBLOCK, -YBLOCK, -LATITUDE, -LONGITUDE), 
+                          normalized_numeric_columns)
+
+str(crime_data2)
+
+# view the first 5 rows of the data set 
+head(crime_data2)
+
+
+```
+ 
+ Now start the EDA- Exploratory Data Analysis
+ 
+ summary stastics 
+ 
+```{r}
+
+summary(crime_data2)
+```
+
+
+summary provide the  stastics information for each varible in the dataset. '
+```{r}
+
+# Summarize total offenses by ward
+offense_total_by_ward <- crime_data2 %>%
+  group_by(WARD) %>%
+  summarise(Total_Offenses = n())
+
+# View the summarized data
+print(offense_total_by_ward)
+
+```
+
+
+```{r}
+offence_count <- crime_data2 %>%
+  group_by(OFFENSE)%>%
+  summarise(count=n())
+
+print(offence_count)
+  
+```
+
+
+
+```{r}
+# Group by SHIFT and summarize the count of offenses
+offence_by_shift <- crime_data2 %>%
+  group_by(SHIFT) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Check the structure of the resulting table
+str(offence_by_shift)
+
+# Print the summary table
+print(offence_by_shift)
+
+```
+
+
+
+
+crime count by shift 
+
+count by method 
+
+```{r}
+# Check if SHIFT is a factor or convert it to one if needed
+crime_data2$SHIFT <- as.factor(crime_data2$SHIFT)
+
+library(dplyr)
+
+# Ensure SHIFT is a factor
+crime_data2$SHIFT <- as.factor(crime_data2$SHIFT)
+
+# Group by SHIFT and OFFENSE and summarize
+offence_by_shift <- crime_data2 %>%
+  group_by(SHIFT, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Check the structure of the resulting data frame
+str(offence_by_shift)
+head(offence_by_shift)
+
+# Print the summary table
+print(offence_by_shift)
+
+```
+
+
+```{r}
+# Check the structure and contents of the `offence_by_shift`
+str(offence_by_shift)
+head(offence_by_shift)
+
+# Ensure SHIFT is a factor
+crime_data2$SHIFT <- as.factor(crime_data2$SHIFT)
+
+# Group by SHIFT and summarize the count of offenses
+offence_by_shift <- crime_data2 %>%
+  group_by(SHIFT, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+
+# Group by SHIFT and summarize the total count of offenses
+offence_by_shift_summary <- crime_data2 %>%
+  group_by(SHIFT) %>%
+  summarise(Total_Offenses = n(), .groups = 'drop')
+
+# Pie chart
+ggplot(offence_by_shift_summary, aes(x = "", y = Total_Offenses, fill = SHIFT)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +  # Converts bar chart to pie chart
+  theme_void() +  # Removes all axis and grid lines
+  labs(title = "Offense Distribution by Shift") +
+  scale_fill_brewer(palette = "Set3") +  # Optional: Use a color palette
+  geom_text(aes(label = paste0(SHIFT, ": ", Total_Offenses)),
+            position = position_stack(vjust = 0.5))  # Add labels inside pie chart
+
+
+```
+
+
+```{r}
+# Summarize the count of offenses by district
+OFFENCE_BY_DISTRICT <- crime_data2 %>%
+  group_by(DISTRICT) %>%
+  summarise(count = n(), .groups = 'drop')  # 'drop' will ungroup after summarizing
+
+# Print the summarized table
+print(OFFENCE_BY_DISTRICT)
+
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+ggplot(OFFENCE_BY_DISTRICT, aes(x = 2, y = count, fill = as.factor(DISTRICT))) +
+  geom_bar(stat = "identity",  width = 1) +
+  coord_polar(theta = "y") +
+  xlim(0.5, 2.5) +  # To create the donut hole
+  theme_void() +  # Removes all axis and grid lines
+  labs(title = "Count of Offenses by  District") +
+  theme(legend.position = "right")  +
+  geom_text(aes(label = paste0(DISTRICT, ": ", count)   ),
+            position = position_stack(vjust = 0.5))   +
+        scale_fill_brewer(palette = "Set3")  
+
+
+```
+ 
+ 
+ 
+ distrubution of the crime offence by  type of the offence 
+ 
+  horizontal - bar plot for the offec frequency 
+  
+```{r}
+ggplot(crime_data2, aes(x = OFFENSE)) +
+  geom_bar(fill = "red") +
+  labs(title = "Distribution of Crime Offenses", x = "Count", y = "Offense Type") +
+  theme(axis.text.y = element_text(size = 100)) +  
+  theme_minimal()  +
+  # cord flip for more readibility of the plot , plot is not good readable as verticle so flip to horizontal.
+ coord_flip()  
+
+``` 
+ 
+so the most common offence is Theft/other  , followed by theft/auto 
+
+most offense type in the Washigton D.C is theft ont he 1st  other and on 2nd is vhehicle 
+
+ 
+ 
+ IMP -- 
+  THEFT/OTHER ==This refers to theft of property that is not a motor vehicle
+    Theft/auto==  Also known as grand theft auto, this is the theft of a motor vehicle, such as a car, boat,                         camper, or motorcycle. 
+ 
+ 
+ 
+ 
+ OFFENCE BY SHIFT 
+ 
+```{r}
+
+# Plot the distribution of different offenses by shift
+ggplot(crime_data2, aes(x = SHIFT, fill = OFFENSE)) +
+  geom_bar(position = "dodge") +  # Use dodge to separate bars for different offenses
+  labs(title = "Distribution of Offenses by Shift", x = "Shift", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, size = 10, hjust = 1)) +  # Rotate x-axis labels
+  theme_minimal()
+```
+
+```{r}
+# Summarize the count of offenses by SHIFT and OFFENSE
+offense_by_shift_summary <- crime_data2 %>%
+  group_by(SHIFT, OFFENSE) %>%
+  summarise(Total_Offenses = n(), .groups = 'drop')
+
+
+ggplot(offense_by_shift_summary, aes(x = 2, y = Total_Offenses, fill = OFFENSE)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar(theta = "y") + 
+  xlim(0.5, 2.5) + 
+  theme_void() +  
+  facet_wrap(~ SHIFT) +  
+  labs(title = "Doughnut Chart: Offense Distribution by Shift") +
+  scale_fill_brewer(palette = "Set3") + 
+  theme(legend.position = "bottom")  
+
+```
+
+
+
+
+ YOU can see the most of the offence are at the evening time followed by day and midnight 
+ 
+ from above graph we know that 
+ 
+Most importtant part from this graph we get that
+
+we  ROBBERY offence increse during the midnight time 
+ROBBERY OFFENCE , it is more than motor vechile theft . 
+
+and also the use of the dengorious waspon increase in the evening and midnight 
+
+
+
+METHOD OF OFFENCE VS OFFENCE 
+
+```{r}
+# Summarize offenses by SHIFT
+offense_by_shift_funnel <- crime_data2 %>%
+  group_by(SHIFT) %>%
+  summarise(Total_Offenses = n(), .groups = 'drop') %>%
+  arrange(desc(Total_Offenses))  # Arrange shifts by number of offenses
+
+# Create funnel chart
+ggplot(offense_by_shift_funnel, aes(x = SHIFT, y = Total_Offenses, fill = SHIFT)) +
+  geom_col(width = 0.7) +  # Bar chart with narrow bars
+  coord_flip() +  # Flip to make it look like a funnel
+  geom_text(aes(label = Total_Offenses), hjust = -0.2) +  # Add labels
+  scale_y_reverse() +  # Reverse the y-axis to give the funnel effect
+  labs(title = "Funnel Chart: Offense Counts by Shift", x = "Shift", y = "Total Offenses") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2")
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+ggplot(crime_data2, aes(x = METHOD, fill = OFFENSE)) +
+  geom_bar(position = "dodge") +  # Use dodge to separate bars for different offenses
+  labs(title = "Distribution of Offenses by Method", x = "Method", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, size = 10, hjust = 1)) +  
+  theme_minimal()
+
+
+```
+
+ 
+ 
+ 
+```{r}
+# Convert WARD to integer
+
+# Check unique values in the WARD column
+
+
+crime_data2$WARD <- as.factor(crime_data2$WARD)
+
+
+distru_by_ward <- ggplot(crime_data2, aes(x = WARD, fill = OFFENSE)) +
+  geom_bar(position = "dodge") +  
+  labs(title = "Distribution of Offenses by Ward", x = "Ward", y = "Count") +
+  theme(axis.text.x = element_text(angle = 90, size = 10, hjust = 10)) +theme_minimal()
+
+distru_by_ward
+
+```
+ 
+ in above graoh we see , ward 2nhave more offence followed by 
+ 
+ 
+ in the below we want to see crime by month-date so 
+ 
+
+```{r}
+
+
+
+# Ensure date columns are in proper date format
+crime_data2$START_DATE <- as.Date(crime_data2$START_DATE)
+
+# Extract the year and month from the START_DATE column
+crime_data2$YearMonth <- format(crime_data2$START_DATE, "%Y-%m")
+
+# Filter the data to include only from January 2023
+crime_data_filtered <- crime_data2 %>%
+  filter(YearMonth >= "2022-12")
+
+# Group by YearMonth and count the number of offenses
+offense_by_month <- crime_data_filtered %>%
+  group_by(YearMonth) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Plot the temporal analysis (Offenses by Month) with flipped coordinates
+ggplot(offense_by_month, aes(x = YearMonth, y = Count, group = 1)) +
+  geom_line(color = "blue") +
+  geom_point(color = "red") +
+  labs(title = "Number of Offenses Over Time (Starting from Jan 2023)", x = "Year-Month", y = "Offense Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  coord_flip() +  # Flip the x and y axes
+  theme_minimal()
+
+
+
+```
+ 
+ 
+ 
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+# Ensure START_DATE is in Date format
+crime_data2$START_DATE <- as.Date(crime_data2$START_DATE)
+
+# Extract year and month
+crime_data2$Year <- year(crime_data2$START_DATE)
+crime_data2$Month <- month(crime_data2$START_DATE, label = TRUE)
+
+# Define seasons based on months (northern hemisphere)
+crime_data2$Season <- case_when(
+  crime_data2$Month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+  crime_data2$Month %in% c("Mar", "Apr", "May") ~ "Spring",
+  crime_data2$Month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+  crime_data2$Month %in% c("Sep", "Oct", "Nov") ~ "Fall",
+  TRUE ~ NA_character_  # Assign NA for months not matching (just in case)
+)
+
+# Group by season and summarize total crime count per season, removing NA
+crime_by_season <- crime_data2 %>%
+  filter(!is.na(Season)) %>%  # Remove NA values
+  group_by(Season) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Group by month and summarize total crime count per month, removing NA
+crime_by_month <- crime_data2 %>%
+  filter(!is.na(Month)) %>%  # Remove NA values
+  group_by(Month) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Plot crime counts by season to identify seasonal patterns
+ggplot(crime_by_season, aes(x = Season, y = Count, fill = Season)) +
+  geom_bar(stat = "identity", color = "black") +
+  labs(title = "Seasonal Crime Patterns", x = "Season", y = "Crime Count") +
+  theme_minimal()
+
+# Plot crime counts by month to identify monthly spikes
+ggplot(crime_by_month, aes(x = Month, y = Count, group = 1)) +
+  geom_line(color = "blue") +
+  geom_point(color = "red") +
+  labs(title = "Monthly Crime Trends", x = "Month", y = "Crime Count") +
+  theme_minimal()
+
+
+
+```
+ in this data, we can see that in july --- most of crime occurs.
+ 
+ and most of crime occours un the summer.
+ 
+ 
+ 
+```{r}
+
+
+# Ensure LATITUDE and LONGITUDE are numeric
+
+crime_data2$LATITUDE <- as.numeric(crime_data2$LATITUDE)
+crime_data2$LONGITUDE <- as.numeric(crime_data2$LONGITUDE)
+
+# Plot geographic distribution of crime using LATITUDE and LONGITUDE
+ggplot(crime_data2, aes(x = LONGITUDE, y = LATITUDE, color = OFFENSE)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(title = "Geographic Distribution of Crimes by Offense",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+
+```
+ 
+```{r}
+
+#install.packages("ggmap")
+#library(ggmap)
+
+
+
+# Get a map of Washington, DC
+# dc_map <- get_map(location = c(lon = -77.0369, lat = 38.9072), zoom = 12, maptype = "roadmap")
+
+# Plot crimes over the map
+# ggmap(dc_map) +
+#  geom_point(data = crime_data2, aes(x = LONGITUDE, y = LATITUDE, color = OFFENSE), alpha = #0.5, size = 1) +
+ # labs(title = "Geographic Distribution of Crimes on DC Map", x = "Longitude", y = #"Latitude") +
+ # theme_minimal() 
+
+
+```
+ 
+ 
+ 
+```{r}
+
+offense_summary <- crime_data2 %>%
+  group_by(OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  arrange(desc(Count))
+
+
+
+```
+
+
+
+```{r}
+# Summarize offense counts by Shift
+offense_by_shift <- crime_data2 %>%
+  group_by(SHIFT, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Create a bar plot to visualize offenses by shift
+ggplot(offense_by_shift, aes(x = OFFENSE, y = Count, fill = SHIFT)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Offense Types by Shift", x = "Offense Type", y = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+
+
+
+```
+
+
+
+# coorrelation between numerical variables x,y ,ward, latitude , longitude  
+
+```{r}
+# Select numeric columns for correlation analysis
+numeric_columns <- crime_data2 %>%
+  select(X, Y, LATITUDE, LONGITUDE, PSA, WARD, DISTRICT)
+
+# Check the structure of numeric columns
+str(numeric_columns)
+
+
+
+
+```
+ 
+```{r}
+# Convert non-numeric columns to numeric (if necessary)
+numeric_columns <- crime_data2 %>%
+  select(X, Y, LATITUDE, LONGITUDE, PSA, WARD, DISTRICT) %>%
+  mutate(across(everything(), ~ as.numeric(.)))
+
+# Check structure to confirm all columns are now numeric
+str(numeric_columns)
+
+```
+
+
+
+```{r}
+# Calculate the correlation matrix
+correlation_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Print the correlation matrix
+print(correlation_matrix)
+
+```
+
+
+```{r}
+# Set a CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+
+
+# Load necessary libraries or install if not available
+if (!requireNamespace("corrplot", quietly = TRUE)) {
+  install.packages("corrplot")
+}
+
+
+```
+
+
+```{r}
+
+library(corrplot)
+
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Plot the correlation matrix using corrplot
+corrplot(correlation_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.cex = 0.8, number.cex = 0.8,
+         addCoef.col = "black", title = "Correlation Matrix of Crime Data")
+```
+```{r}
+crime_data$WARD <- as.factor(crime_data$WARD)
+
+# Scatter plot of LONGITUDE vs WARD
+ggplot(crime_data, aes(x = WARD, y = LONGITUDE)) +
+  geom_boxplot(fill = "lightblue", color = "black") +
+  labs(title = "Relationship Between WARD and LONGITUDE", 
+       x = "Ward", 
+       y = "Longitude") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+distru_by_ward
+
+
+library(ggplot2)
+library(dplyr)
+
+# Assuming crime_data2 is your dataset and has the relevant columns
+offense_by_ward_method <- crime_data2 %>%
+  group_by(WARD, METHOD) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Plot the count of offenses by ward and method
+ggplot(offense_by_ward_method, aes(x = WARD, y = Count, fill = METHOD)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Use dodge to separate bars for different methods
+  labs(title = "Count of Offenses by Ward and Method", 
+       x = "Ward", 
+       y = "Count of Offenses") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))  # Rotate x-axis labels for clarity
+ 
+
+
+library(dplyr)
+
+
+offense_total_by_ward <- crime_data2 %>%
+  group_by(WARD) %>%
+  summarise(Total_Offenses = n()) %>%
+  arrange(desc(Total_Offenses))  
+
+print(offense_total_by_ward)
+
+
+```
+
+
+for above now i wann see that is there significance association between the ward and offence 
+
+
+```{r}
+
+# Load necessary libraries
+library(dplyr)
+
+# Create a contingency table of WARD and OFFENSE
+contingency_table <- table(crime_data2$WARD, crime_data2$OFFENSE)
+
+# Perform the Chi-squared test
+chi_squared_result <- chisq.test(contingency_table)
+
+# Print the results
+print(chi_squared_result)
+
+```
+
+
+Now i wann see that is there    significance is between 
+the distribution of offenses is the same across the different methods and shifts.
+
+
+
+H0 - there is no assosiation between type of the offence and method used 
+H1--  there is an association between the type of offense and the method used during different shifts.
+
+
+due to the extremly low p value we reject te Null hypothesis and accept the alternative hypothesis.
+
+degree of freedom-16
+
+
+```{r}
+# Create a contingency table for OFFENSE, SHIFT, and METHOD
+contingency_table <- table(crime_data2$OFFENSE, crime_data2$SHIFT, crime_data2$METHOD)
+
+# View the contingency table
+print(contingency_table)
+# Create a contingency table for OFFENSE and METHOD
+contingency_table_2d <- table(crime_data2$OFFENSE, crime_data2$METHOD)
+
+# View the contingency table
+print(contingency_table_2d)
+
+
+# Perform the Chi-squared test
+chi_square_result <- chisq.test(contingency_table_2d)
+
+# View the results
+print(chi_square_result)
+
+
+```
+
+
+```{r}
+
+library(devtools)
+
+# Install DCmapR from GitHub
+#devtools::install_github("BingoLaHaye/DCmapR")
+
+```
+
+
+
+
+
+```{r}
+library(DCmapR)
+#devtools::install_github("BingoLaHaye/DCmapR")
+
+
+```
+
+```{r}
+
+
+# Check if DCmapR is installed
+if (!requireNamespace("DCmapR", quietly = TRUE)) {
+    install.packages("devtools")  # Install devtools if not already installed
+    devtools::install_github("BingoLaHaye/DCmapR")
+}
+
+# Load the library
+library(DCmapR)
+
+```
+
+
+
+ 
+```{r}
+# Lis
+```
+ Lets start with the stastical test now, 
+ 
+ 
+annova---
+
+H1--- Crime Rate across all the disctrict are same 
+
+H2---  This indicates that there are significant differences in crime rates across wards, types of offenses, and methods used.
+
+P value for the WArd, Offence, Method are less than significance level 0.005
+
+
+
+```{r}
+
+
+#any(is.na(crime_data2$count))
+
+crime_data2$WARD <- as.factor(crime_data2$WARD)
+
+aov_results <- aov(DISTRICT~WARD +OFFENSE + METHOD , data = crime_data2)
+summary(aov_results)
+
+
+```
+```{r}
+TukeyHSD(aov_results)
+
+```
+  
+  
+  
+  Now i wann sww is there any difference betweent the dat and midnight time change op of the location base on the co-ordinate(X and Y ) so for the co ordanate we 
+  
+  taking the t test- with co-ordinate and shift of the day
+  
+  based on the data we say that 
+  
+  
+```{r}
+# Subset data for only robberies
+robbery_data <- crime_data2 %>% filter(OFFENSE == "ROBBERY")
+
+# Separate into DAY and MIDNIGHT shift data
+day_shift <- robbery_data %>% filter(SHIFT == "DAY")
+midnight_shift <- robbery_data %>% filter(SHIFT == "MIDNIGHT")
+
+# T-test for X coordinate (compare DAY and MIDNIGHT shifts)
+t_test_x <- t.test(day_shift$X, midnight_shift$X, alternative = "two.sided")
+
+# T-test for Y coordinate (compare DAY and MIDNIGHT shifts)
+t_test_y <- t.test(day_shift$Y, midnight_shift$Y, alternative = "two.sided")
+
+# Print the results
+print("T-test results for X coordinate:")
+print(t_test_x)
+
+print("T-test results for Y coordinate:")
+print(t_test_y)
+
+
+
+
+```
+ interpretation on the test according to the x , y coordinate during the  ---
+ 
+ 
+ The p-value is 0.2475, which is greater than 0.05, indicating no significant difference in the Y coordinates between DAY and MIDNIGHT shifts.
+ 
+ 
+The confidence interval includes 0, suggesting that the difference in means is not meaningful.
+In conclusion:
+
+The X coordinates (longitude) are significantly different between DAY and MIDNIGHT robberies.
+The Y coordinates (latitude) do not show a significant difference between the two shifts.
+This analysis could suggest a spatial shift in the location of robberies between DAY and MIDNIGHT but no major change in location.
+
+
+
+```{r}
+
+
+# Step 1: Count the number of robbery offenses for each shift
+robbery_counts <- robbery_data %>%
+  group_by(SHIFT) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Check the robbery_counts to ensure we have the data
+print(robbery_counts)
+
+# Extract the counts for day and evening shifts
+day_count <- robbery_counts$Count[robbery_counts$SHIFT == "DAY"]
+evening_count <- robbery_counts$Count[robbery_counts$SHIFT == "EVENING"]
+
+# Step 2: Perform a t-test (Note: This is more suitable for comparing means, not counts)
+# Here we need to provide raw data for both shifts
+# Create vectors for raw data based on counts
+day_robbery_data <- robbery_data$OBJECTID[robbery_data$SHIFT == "DAY"]
+evening_robbery_data <- robbery_data$OBJECTID[robbery_data$SHIFT == "EVENING"]
+
+# Perform the t-test
+t_test_result <- t.test(day_robbery_data, evening_robbery_data, 
+                         alternative = "two.sided")
+
+# Print the results
+print(t_test_result)
+
+
+
+```
+
+ Mean of Day Shift (x): 596,465,464
+Mean of Evening Shift (y): 596,471,633
+These values represent the average number of robberies during each shift. The means are very close to each other, suggesting that the number of robberies is similar in both shifts.
+
+
+P-value- p-value = 0.3474: This value indicates the probability of observing the data (or something more extreme) if the null hypothesis is true. A p-value greater than 0.05 typically suggests that you fail to reject the null hypothesis. In this case, since the p-value is 0.3474, there is not enough evidence to conclude that there is a significant difference in the number of robberies between day and evening shifts.
+
+
+
+
+```{r}
+
+# Load necessary library
+library(dplyr)
+
+# Assuming 'data' is your data frame
+# Step 1: Filter the data for method "GUN"
+gun_data <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  select(SHIFT)
+
+# Step 2: Create a contingency table
+contingency_table <- table(gun_data$SHIFT)
+
+# Print the contingency table
+print(contingency_table)
+
+# Step 3: Perform Chi-Square Test
+chi_square_result <- chisq.test(contingency_table)
+
+# Step 4: Print Results
+print(chi_square_result)
+
+#
+
+
+if (chi_square_result$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the method 'GUN' and the shifts.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the method 'GUN' and the shifts.")
+}
+
+```
+
+p-value < 2.2e-16  significantly less than 0.05 so we reject the null hypothesis and accepet the alternative hypothesis. 
+
+
+
+
+ The results suggest that the timing of "GUN" offenses varies significantly by shift, with a greater number of occurrences during MIDNIGHT compared to DAY and EVENING. This finding could have implications for law enforcement and crime prevention strategies, indicating a need for targeted resource allocation during specific times
+ 
+ 
+ let see with disctrict , is . evry disctrcit have same frequence for the method. 
+ H0 - every distrcit have same amount of the gun accident happend during 
+ H1-- different distrcit have different amount of incident occurs. 
+ 
+ 
+ 
+ Chi-squared test
+ 
+ H0---for  the frequency of gun offenses is the same across all districts for that shift.
+H1-- There is a significant association between the district and the occurrence of gun-related offenses during the specific shift
+
+ 
+```{r}
+
+# For each shift, create a contingency table for DISTRICT and METHOD
+gun_data_day <- crime_data2 %>% filter(SHIFT == "DAY", METHOD == "GUN")
+gun_data_evening <- crime_data2 %>% filter(SHIFT == "EVENING", METHOD == "GUN")
+gun_data_midnight <- crime_data2 %>% filter(SHIFT == "MIDNIGHT", METHOD == "GUN")
+
+# Create contingency tables for each time period
+contingency_day <- table(gun_data_day$DISTRICT)
+contingency_evening <- table(gun_data_evening$DISTRICT)
+contingency_midnight <- table(gun_data_midnight$DISTRICT)
+
+# Step 2: Perform Chi-Square Tests for Each Shift
+chi_square_day <- chisq.test(contingency_day)
+chi_square_evening <- chisq.test(contingency_evening)
+chi_square_midnight <- chisq.test(contingency_midnight)
+
+# Print Results
+print(chi_square_day)
+print(chi_square_evening)
+print(chi_square_midnight)
+
+ 
+```
+ p-value is much lower than 0.05
+ 
+frequency of gun-related offenses during the MIDNIGHT shift also varies significantly across districts.
+
+
+results of the Chi-squared tests for all shifts indicate that there is a significant association between the district and the occurrence of gun-related offenses
+
+ 
+```{r}
+gun_data <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  select(DISTRICT)
+
+# Step 2: Create a contingency table
+contingency_table <- table(gun_data$DISTRICT)
+
+# Print the contingency table
+print(contingency_table)
+
+# Step 3: Perform Chi-Square Test
+chi_square_result <- chisq.test(contingency_table)
+
+# Step 4: Print Results
+print(chi_square_result)
+
+# Step 5: Interpretation
+if (chi_square_result$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the method 'GUN' and the DISTRICT.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the method 'GUN' and the DISTRICT.")
+  
+  
+  
+district_offense_counts <- gun_data %>%
+  group_by(DISTRICT) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count))  # Sort in descending order
+
+# Step 3: Print the results
+print(district_offense_counts)
+
+# Step 4: Identify the district with the most offenses
+most_offenses_district <- district_offense_counts[1, ]
+print(paste("The district with the most 'GUN' offenses is:", most_offenses_district$DISTRICT, "with", most_offenses_district$Count, "offenses."))
+}
+
+```
+results suggest that the use of "GUN" as an offense method varies significantly across different districts. This finding implies that certain districts may experience higher occurrences of gun-related offenses than others. Understanding these variations can inform law enforcement strategies and resource allocation to address crime effectively in areas where gun offenses are more prevalent.
+  
+  
+
+
+
+
+
+ 
+ 
+ 
+```{r}
+district_offense_counts <- gun_data %>%
+  group_by(DISTRICT) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count))  # Sort in descending order
+
+# Step 3: Print the results
+print(district_offense_counts)
+
+# Step 4: Identify the district with the most offenses
+most_offenses_district <- district_offense_counts[1, ]
+print(paste("The district with the most 'GUN' offenses is:", most_offenses_district$DISTRICT, "with", most_offenses_district$Count, "offenses."))
+```
+ The district with the most 'GUN' offenses is: 6 with 770 offenses.
+ 
+ 
+
+```{r}
+# Assuming 'data' is your data frame
+# Step 1: Extract the Day and Month from REPORT_DAT
+data <- crime_data2 %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")),
+         Month = format(REPORT_DAT, "%m")) # Extract month if needed
+
+# Step 2: Group by Day and count occurrences
+daily_offense_counts <- data %>%
+  group_by(Day) %>%
+  summarise(Count = n())
+
+# Step 3: Print the daily offense counts
+print(daily_offense_counts)
+
+# Step 4: Visualize the results
+ggplot(daily_offense_counts, aes(x = Day, y = Count)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Daily Crime Activity", x = "Day of the Month", y = "Number of Offenses") +
+  theme_minimal()
+
+
+```
+ Chisq.test for knife related offeces by ward and district along with with hypothesis.
+ 
+ 
+ 1) chi-Squared test for ward Vs Day 
+ 
+ H0-- no relation between knife ralated offences between  the ward and day of month between 
+ 
+ 
+ H1-- there is a significant rlelation between the knife related activity and ward and date of the month 
+```{r}
+
+# Step 1: Filter data for knife-related activity
+knife_data <- crime_data2 %>%
+  filter(METHOD == "KNIFE") %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")),    # Extract day
+         Month = format(REPORT_DAT, "%m"),              # Extract month
+         WARD = as.factor(WARD),                       # Ensure WARD is a factor
+         DISTRICT = as.factor(DISTRICT))               # Ensure DISTRICT is a factor
+
+# Step 2: Create contingency tables for knife offenses by WARD, DISTRICT, and Day
+# Contingency table for WARD
+contingency_ward <- table(knife_data$WARD, knife_data$Day)
+
+# Contingency table for DISTRICT
+contingency_district <- table(knife_data$DISTRICT, knife_data$Day)
+
+# Step 3: Chi-Square Test for WARD and Day (knife-related activity)
+chi_square_ward <- chisq.test(contingency_ward)
+
+# Chi-Square Test for DISTRICT and Day (knife-related activity)
+chi_square_district <- chisq.test(contingency_district)
+
+# Step 4: Print the results of the Chi-Square tests
+print(chi_square_ward)
+print(chi_square_district)
+
+# Step 5: Visualize knife-related activity by WARD and Day
+ggplot(knife_data, aes(x = Day, fill = WARD)) +
+  geom_histogram(binwidth = 1, position = "stack") +
+  labs(title = "Knife-Related Offenses by Day and WARD", x = "Day of the Month", y = "Count of Offenses") +
+  theme_minimal()
+```
+from the chisquare test we know that , we are getting the p value is o.2738 so we failed the reject the null hypothesis and accept the alter native hypotheis
+
+
+
+
+
+ H0---  there is relation between knife is used for offence between distrcit and day of the month 
+ H1--  This suggests that there is no significant association between the district and the day of the month for knife-related offenses.
+ 
+ 
+```{r}
+# Step 6: Visualize knife-related activity by DISTRICT and Day
+ggplot(knife_data, aes(x = Day, fill = DISTRICT)) +
+  geom_histogram(binwidth = 1, position = "stack") +
+  labs(title = "Knife-Related Offenses by Day and DISTRICT", x = "Day of the Month", y = "Count of Offenses") +
+  theme_minimal()
+
+
+```
+ the p-value (0.3968) is greater than the significance level of 0.05, we fail to reject the null hypothesis. This suggests that there is no significant association between the district and the day of the
+ month for knife-related offenses.
+ 
+ 
+ Now i wann see for the Gun type of the offences 
+ 
+ 
+ Gun-Related Offenses -- Ward vs. Day of the Month
+ 
+ H0--  no significant association between the ward and the day of the month for gun-related offenses
+ 
+ H1`--- significant association between the ward and the day of the month for gun-related offenses.
+ 
+ 
+ 
+ 
+```{r}
+
+# Step 1: Filter the data for method "GUN"
+gun_data <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")))
+
+# Step 2: Create a contingency table for Ward and Day of the Month
+contingency_ward_day <- table(gun_data$WARD, gun_data$Day)
+
+# Step 3: Perform Chi-Square Test for Ward vs. Day of the Month
+chi_square_ward_day <- chisq.test(contingency_ward_day)
+
+# Print the result
+print(chi_square_ward_day)
+
+```
+ p-value = 0.002144, which is less than 0.05, we reject the null hypothesis (H0).
+ 
+ There is a statistically significant association between the ward and the day of the month for gun-related offenses, meaning that the distribution of gun-related crimes varies across different wards depending on the day of the month
+ 
+ 
+```{r}
+
+
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+
+# Step 1: Filter data for 'GUN' method
+gun_data <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")),  # Extract day from date
+         Ward = WARD)  # Assuming WARD is the column for wards
+
+# Step 2: Group by Ward and Day, count the number of offenses
+ward_day_gun_counts <- gun_data %>%
+  group_by(Ward, Day) %>%
+  summarise(Count = n())
+
+# Step 3: Create a heatmap using ggplot
+ggplot(ward_day_gun_counts, aes(x = Day, y = as.factor(Ward), fill = Count)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightblue", high = "red", na.value = "grey50") +
+  labs(title = "Gun-related Activity by Ward and Day of the Month",
+       x = "Day of the Month",
+       y = "Ward",
+       fill = "Number of Offenses") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+
+```
+so that we can see that particular ward with a particular date , offences happend so we have to make sure here on that day police petrol be there so that we can reduce the crime activity. 
+
+
+
+
+
+Chi-square test summary -- Gun activity by district and day of month 
+
+H0-- There is no significant association between the district and the day of the month for gun-related activity
+
+H1--  There is  significant association between the district and the day of the month for gun-related activity
+
+
+
+
+
+```{r}
+
+# Step 4: Create a contingency table for District and Day of the Month
+contingency_district_day <- table(gun_data$DISTRICT, gun_data$Day)
+
+# Step 5: Perform Chi-Square Test for District vs. Day of the Month
+chi_square_district_day <- chisq.test(contingency_district_day)
+
+# Print the result
+print(chi_square_district_day)
+```
+  p-value (0.0004012) is much smaller than the significance level of 0.05, we reject the null hypothesis. This indicates that there is a significant relationship between the district and the day of the month for gun-related incidents.
+  
+  
+  
+```{r}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+
+# Step 1: Filter data for 'GUN' method
+gun_data_district <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")),  # Extract day from date
+         District = DISTRICT)  # Assuming DISTRICT is the column for districts
+
+# Step 2: Group by District and Day, count the number of offenses
+district_day_gun_counts <- gun_data_district %>%
+  group_by(District, Day) %>%
+  summarise(Count = n())
+
+# Step 3: Create a heatmap using ggplot
+ggplot(district_day_gun_counts, aes(x = Day, y = as.factor(District), fill = Count)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "lightyellow", high = "red", na.value = "grey50") +
+  labs(title = "Gun-related Activity by District and Day of the Month",
+       x = "Day of the Month",
+       y = "District",
+       fill = "Number of Offenses") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+```
+from the heatmap we ca say that on the particular date and particular district , if we can increase the police activity in that location we can reduce the acivity.. 
+
+
+
+########################## DONE########################################
+
+###################################################################################################
+ 
+ 
+ # crime-offenece by date
+ 
+```{r}
+# Load necessary libraries
+library(dplyr)
+
+# Assuming 'data' is your data frame
+# Step 1: Extract the Day from REPORT_DAT
+data <- data %>%
+  mutate(Day = as.numeric(format(REPORT_DAT, "%d")),
+         Month = format(REPORT_DAT, "%m")) # Optional if you want to analyze by month
+
+# Step 2: Create a contingency table
+contingency_table <- table(data$Day, data$METHOD)
+
+# Print the contingency table
+print(contingency_table)
+
+
+
+# Step 3: Perform Chi-Square Test
+chi_square_result <- chisq.test(contingency_table)
+
+# Step 4: Print Results
+print(chi_square_result)
+
+# Step 5: Interpretation
+if (chi_square_result$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the date and the method used.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the date and the method used.")
+}
+
+
+```
+ The significant association suggests that the distribution of methods used in crimes varies by day. In other words, certain methods (like "GUN," "OTHERS," etc.) may be more prevalent on specific days of the month.
+
+Temporal Patterns: This finding implies that crime patterns may be influenced by temporal factors. For example, you might observe increases in certain types of offenses or methods during weekends, holidays, or specific days of the month.
+
+
+
+Frequency Analysis: Examine the counts of each method on different days to identify which days have higher occurrences of specific methods.
+
+
+
+
+```{r}
+
+# Load necessary library for visualization
+library(ggplot2)
+
+# Convert the contingency table into a data frame for plotting
+contingency_df <- as.data.frame(contingency_table)
+
+# Rename columns for clarity
+colnames(contingency_df) <- c("Day", "Method", "Count")
+
+# Step 4: Create a heatmap to visualize the counts
+ggplot(contingency_df, aes(x = Day, y = Count, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Use "dodge" for side-by-side bars
+  labs(title = "Crime Method Distribution by Day of the Month",
+       x = "Day of the Month",
+       y = "Number of Offenses") +
+  scale_fill_brewer(palette = "Set3") +  # Choose a color palette
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
+from the above , we can see that 
+on the particular date like on date 7,11,18 increase of the offence , we can decrease by peytroling the high on that particular date of month.
+
+
+
+
+```{r}
+
+
+# Load necessary library
+library(dplyr)
+
+# Assuming 'data' is your data frame
+# Step 1: Filter out NA values
+filtered_data <- data %>%
+  filter(!is.na(BID) & !is.na(OFFENSE))
+
+# View the filtered data
+#print(filtered_data)
+
+# Step 2: Group by BID and OFFENSE, then count occurrences
+offense_by_bid <- filtered_data %>%
+  group_by(BID, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')   # .groups = 'drop' to avoid grouping in further operations
+
+# Step 3: Arrange by Count in descending order
+offense_by_bid <- offense_by_bid %>%
+  arrange(desc(Count))
+
+# View the arranged summary of offenses by BID
+print(offense_by_bid)
+
+```
+
+
+
+
+
+```{r}
+
+offense_count <- crime_data2 %>%
+  group_by(NEIGHBORHOOD_CLUSTER, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Perform ANOVA
+anova_result <- aov(Count ~ NEIGHBORHOOD_CLUSTER + OFFENSE, data = offense_count)
+
+# Display the summary of the ANOVA test
+summary(anova_result)
+
+# Perform Tukey's HSD test for NEIGHBORHOOD_CLUSTER
+tukey_cluster <- TukeyHSD(aov(Count ~ NEIGHBORHOOD_CLUSTER, data = offense_count))
+#print(tukey_cluster)
+
+# Perform Tukey's HSD test for OFFENSE
+tukey_offense <- TukeyHSD(aov(Count ~ OFFENSE, data = offense_count))
+#print(tukey_offense)
+
+
+```
+
+
+Cluster with Most Offenses: Cluster 2 has the highest count of offenses 
+
+Cluster with Least Offenses: Cluster 10 has the lowest count of offenses
+ 
+ 
+
+
+
+
+
+Chisquare test fri catagorical values
+ offence vs method 
+
+```{r}
+
+# Load necessary library
+library(dplyr)
+
+# Step 1: Create Contingency Table
+contingency_table <- table(crime_data2$OFFENSE, crime_data2$METHOD)
+
+# Print the contingency table
+print("Contingency Table:")
+print(contingency_table)
+
+# Step 2: Perform Chi-Square Test
+chi_square_result <- chisq.test(contingency_table)
+
+# Step 3: Print Results
+print("Chi-Square Test Results:")
+print(chi_square_result)
+
+# Step 4: Interpretation
+if (chi_square_result$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the offense type and the method used.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the offense type and the method used.")
+}
+
+```
+above we can see that  the relationship between offense types and the methods used in reported crimes. . The table displays counts for different offense categories (e.g., Arson, Assault with Dangerous Weapon, etc.) across three methods (GUN, KNIFE, OTHERS)
+
+
+
+ p-value significantly less than 0.05, leading to the rejection of the null hypothesis. This indicates that there is a significant association between the offense type and the method used to commit those offenses. 
+ 
+ 
+the choice of method (GUN, KNIFE, OTHERS) varies depending on the type of offense.
+
+
+
+
+
+CHISQUARE TEST BETWEEN THE OFFENCE AND WARD 
+
+
+```{r}
+# Step 1: Summarize the data
+summary(crime_data2$WARD)
+summary(crime_data2$OFFENSE)
+
+# Step 2: Create a contingency table
+ward_offense_table <- table(crime_data2$WARD, crime_data2$OFFENSE)
+
+# Step 3: Visualize the data
+# Use bar plot to visualize the distribution of offenses across wards
+barplot(ward_offense_table, beside = TRUE, legend = TRUE, 
+        col = rainbow(nrow(ward_offense_table)), 
+        main = "Distribution of Offenses Across Wards",
+        xlab = "Offense Type", ylab = "Count")
+
+# Heatmap to visualize relationship between Ward and Offense
+heatmap(ward_offense_table, Rowv = NA, Colv = NA, 
+        col = heat.colors(256), scale = "column", 
+        main = "Heatmap of Ward vs Offense")
+
+
+# Step 4: Perform Chi-Square Test
+chi_square_ward_offense <- chisq.test(ward_offense_table)
+
+# Step 5: Print the results
+print("Contingency Table:")
+print(ward_offense_table)
+
+print("Chi-Square Test Results:")
+print(chi_square_ward_offense)
+
+# Step 6: Interpretation
+if (chi_square_ward_offense$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the ward and the offense type.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the ward and the offense type.")
+}
+
+```
+
+A Chi-Square test was conducted to determine whether there was a statistically significant association between the ward and the offense type.
+
+
+The test resulted in a Chi-Square statistic (X-squared) of 3590.4 with 56 degrees of freedom, and a p-value of less than 2.2e-16.
+
+
+We first examined the distribution of offenses across various wards. Wards 1, 2, and 5 showed relatively higher offense counts, while Ward 3 had the lowest.
+A contingency table was created to show the frequency of different offense types (e.g., Assault, Burglary, Robbery) across each ward.
+
+
+Since the p-value was much smaller than 0.05, we rejected the null hypothesis, indicating that there is a significant association between the ward and the type of offense. In other words, different wards have distinct crime patterns, and the distribution of offense types is not random across the wards.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
