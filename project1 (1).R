@@ -70,6 +70,27 @@ str(crime_data)
 head(crime_data)
 
 ```
+from the is.null operator , we got that there is no record in the OCTO_RECORD_ID column 
+
+total 34215 records are missing from the records. 
+
+
+```{r}
+colnames(crime_data)
+
+colSums(is.na(crime_data))
+
+# Check for duplicate rows from the data set 
+duplicates <- crime_data[duplicated(crime_data), ]
+nrow(duplicates)
+
+head(crime_data)
+
+
+
+
+```
+```{r}
 
 
 
