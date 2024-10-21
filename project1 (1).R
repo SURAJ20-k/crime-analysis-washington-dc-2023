@@ -348,6 +348,89 @@ print(OFFENCE_BY_DISTRICT)
 
 
 ```{r}
+# Crime count based on Shift
+library(ggplot2)
+
+ggplot(crime_data2, aes(x = SHIFT)) +
+  geom_bar(fill = "skyblue") +
+  labs(title = "Crime Count by Shift", x = "Shift", y = "Count") +
+  theme_minimal()
+
+
+
+
+
+
+library(corrplot)
+
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numeric_columns, use = "complete.obs")
+
+# Plot the correlation matrix using corrplot
+corrplot(correlation_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.cex = 0.8, number.cex = 0.8,
+         addCoef.col = "black", title = "Correlation Matrix of Crime Data")
+
+
+
+
+
+
+# Load necessary library
+library(dplyr)
+
+# Assuming 'data' is your data frame
+# Step 1: Filter the data for method "GUN"
+gun_data <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  select(SHIFT)
+
+# Step 2: Create a contingency table
+contingency_table <- table(gun_data$SHIFT)
+
+# Print the contingency table
+print(contingency_table)
+
+# Step 3: Perform Chi-Square Test
+chi_square_result <- chisq.test(contingency_table)
+
+# Step 4: Print Results
+print(chi_square_result)
+
+# Step 5: Interpretation
+if (chi_square_result$p.value < 0.05) {
+  print("Reject the null hypothesis: There is a significant association between the method 'GUN' and the shifts.")
+} else {
+  print("Fail to reject the null hypothesis: There is no significant association between the method 'GUN' and the shifts.")
+}
+
+
+
+
+
+
+
+# Load necessary library for visualization
+library(ggplot2)
+
+# Convert the contingency table into a data frame for plotting
+contingency_df <- as.data.frame(contingency_table)
+
+# Rename columns for clarity
+colnames(contingency_df) <- c("Day", "Method", "Count")
+
+# Step 4: Create a heatmap to visualize the counts
+ggplot(contingency_df, aes(x = Day, y = Count, fill = Method)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Use "dodge" for side-by-side bars
+  labs(title = "Crime Method Distribution by Day of the Month",
+       x = "Day of the Month",
+       y = "Number of Offenses") +
+  scale_fill_brewer(palette = "Set3") +  # Choose a color palette
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
 
 
 
