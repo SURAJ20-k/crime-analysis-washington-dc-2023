@@ -299,6 +299,57 @@ print(offence_by_shift)
 ```
 
 
+```{r}
+# Check the structure and contents of the `offence_by_shift`
+str(offence_by_shift)
+head(offence_by_shift)
+
+# Print to see if the data frame has been populated correctly
+print(offence_by_shift)
+
+
+# Ensure SHIFT is a factor
+crime_data2$SHIFT <- as.factor(crime_data2$SHIFT)
+
+# Group by SHIFT and summarize the count of offenses
+offence_by_shift <- crime_data2 %>%
+  group_by(SHIFT, OFFENSE) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Check the structure of the resulting table
+str(offence_by_shift)
+
+# Print the summary table
+print(offence_by_shift)
+
+
+```
+
+
+```{r}
+# Summarize the count of offenses by district
+OFFENCE_BY_DISTRICT <- crime_data2 %>%
+  group_by(DISTRICT) %>%
+  summarise(count = n(), .groups = 'drop')  # 'drop' will ungroup after summarizing
+
+# Print the summarized table
+print(OFFENCE_BY_DISTRICT)
+
+```
+
+```{r}
+
+
+
+
+```
+
+
+
+
+```{r}
+
+
 
 
 
