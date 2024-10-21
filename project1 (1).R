@@ -175,6 +175,86 @@ str(crime_data1)
 ```
 
 
+Now we have to normalize the data set 
+ Beacuse 
+ 1) uniformality across the featurre- in the data set we have geo location data , date time data ,character data (shift ), numerical data(disctrict ) some pincode , so our data have SACLE  are drastically different , if we don;t normalize , some time anlalysis  will affect 
+ 
+ 2)  it will help in the improving  the speed in analysis 
+ 3) avoid the feature domination effect some feature are x, y co ordinate values are greater than the ward number , so to avioid these domination we have to noramzalise the data set . 
+ 
+ 
+```{r}
+# select the columns , on whcih we have to process the normalize the data. 
+
+# libriry "dplyr" require for the normalize the data . 
+
+
+
+# Select numerical columns that need to be normalized
+# Exclude categorical columns like OFFENSE, SHIFT, METHOD, etc.
+# Select only numeric columns that should be normalized
+numeric_columns <- crime_data1 %>%
+  select(X, Y, XBLOCK, YBLOCK, LATITUDE, LONGITUDE)  # Exclude WARD, DISTRICT, and PSA if they are categorical
+
+# Apply Min-Max normalization for each numeric column
+normalize <- function(x) {
+  return((x - min(x)) / (max(x) - min(x)))
+}
+
+# Apply normalization to the numeric columns
+normalized_numeric_columns <- as.data.frame(lapply(numeric_columns, normalize))
+
+# Add back the non-numeric columns to the normalized dataset
+crime_data2 <- bind_cols(crime_data1 %>% select(-X, -Y, -XBLOCK, -YBLOCK, -LATITUDE, -LONGITUDE), 
+                          normalized_numeric_columns)
+
+
+
+str(crime_data2)
+
+# view the first 5 rows of the data set 
+head(crime_data2)
+
+
+```
+ 
+ Now start the EDA- Exploratory Data Analysis
+ 
+ summary stastics 
+ 
+```{r}
+
+summary(crime_data2)
+```
+
+
+summary provide the  stastics information for each varible in the dataset. '
+```{r}
+
+# Summarize total offenses by ward
+offense_total_by_ward <- crime_data2 %>%
+  group_by(WARD) %>%
+  summarise(Total_Offenses = n())
+
+# View the summarized data
+print(offense_total_by_ward)
+
+```
+
+
+```{r}
+offence_count <- crime_data2 %>%
+  group_by(OFFENSE)%>%
+  summarise(count=n())
+
+print(offence_count)
+
+
+
+```
+
+
+
 
 
 
