@@ -54,7 +54,22 @@ library(leaflet)
 
 
 ```{r}
+# check the data structre 
 
+
+# dataset(data) is a data frame 
+# some time data set name is over written and we have to make sure that we have to 
+# convert that data set  in to data frame  
+
+crime_data <- as.data.frame(crime_data)
+
+
+
+str(crime_data)
+
+head(crime_data)
+
+```
 
 
 
