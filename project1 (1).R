@@ -153,6 +153,27 @@ so we don't have duplicate vlaues in the data set also .
 head(crime_data1)
 crime_data1$REPORT_DAT <- as.Date(crime_data1$REPORT_DAT, formate="%m/%d/%Y")
 
+# extract the year and month also for future plots
+
+crime_data1$Year <- format(crime_data1$REPORT_DAT,"%Y")
+crime_data1$Month <- format(crime_data1$REPORT_DAT,"%m")
+
+head(crime_data1)
+
+```
+ 
+ we can see that , 2 new columns are added at the end of the all columns. now readjust columns, add these columns in the data frame after the REPOST_DAT. 
+ 
+ rearrange the columns and move the columns YEAR and Month after the report year .
+ 
+```{r}
+crime_data1 <- crime_data1 %>%
+    select(1:which(colnames(crime_data1) == "REPORT_DAT"), Year, Month, everything())
+
+head(crime_data1)
+str(crime_data1)
+```
+
 
 
 
