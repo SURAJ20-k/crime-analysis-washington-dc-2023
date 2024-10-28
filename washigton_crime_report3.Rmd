@@ -1035,41 +1035,6 @@ A contingency table was created to show the frequency of different offense types
 Since the p-value was much smaller than 0.05, we rejected the null hypothesis, indicating that there is a significant association between the ward and the type of offense. In other words, different wards have distinct crime patterns, and the distribution of offense types is not random across the wards.
 
 ```{r}
-# Step 1: Summarize the data
-summary(crime_data2$WARD)
-summary(crime_data2$OFFENSE)
-
-# Step 2: Create a contingency table
-ward_offense_table <- table(crime_data2$WARD, crime_data2$OFFENSE)
-
-# Step 3: Visualize the data
-# Use bar plot to visualize the distribution of offenses across wards
-barplot(ward_offense_table, beside = TRUE, legend = TRUE, 
-        col = rainbow(nrow(ward_offense_table)), 
-        main = "Distribution of Offenses Across Wards",
-        xlab = "Offense Type", ylab = "Count")
-
-# Heatmap to visualize relationship between Ward and Offense
-heatmap(ward_offense_table, Rowv = NA, Colv = NA, 
-        col = heat.colors(256), scale = "column", 
-        main = "Heatmap of Ward vs Offense")
-
-# Step 4: Perform Chi-Square Test
-chi_square_ward_offense <- chisq.test(ward_offense_table)
-
-# Step 5: Print the results
-print("Contingency Table:")
-print(ward_offense_table)
-
-print("Chi-Square Test Results:")
-print(chi_square_ward_offense)
-
-# Step 6: Interpretation
-if (chi_square_ward_offense$p.value < 0.05) {
-  print("Reject the null hypothesis: There is a significant association between the ward and the offense type.")
-} else {
-  print("Fail to reject the null hypothesis: There is no significant association between the ward and the offense type.")
-}
 
 ```
 # 5.8)ANNOVA for district and ward 
