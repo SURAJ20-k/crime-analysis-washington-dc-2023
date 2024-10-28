@@ -1,0 +1,51 @@
+# crime-analysis-washington-dc-2023
+---
+title: "Introduction"
+output: html_document
+---
+
+# Introduction
+
+In our project, we aim to investigate crime patterns in Washington, DC, utilizing data from the Open Data DC portal. The dataset, "Crime Incidents in 2023," comprises 34,215 observations detailing reported crimes, including information on the type of offense, time of occurrence, geographic location, and methods involved.
+
+As individuals, especially students, consider buying a house, renting an apartment, relocating, or traveling, one of the first questions that arises is, "Is it safe?" This concern for safety drives many to seek out neighborhoods with low crime rates before evaluating other factors such as price, amenities, and accessibility. Therefore, understanding crime dynamics is crucial not only for law enforcement but also for residents and potential newcomers to the area.
+
+The primary focus of our analysis is to explore crime density across different areas of Washington, DC, identifying neighborhoods that experience the highest levels of criminal activity. This exploration aims to uncover patterns that can inform law enforcement resource allocation and guide community safety initiatives aimed at crime prevention. By providing insights into crime trends, we hope to empower individuals and families to make informed decisions regarding their living environments.
+
+# Data Sources
+
+## Crime Incidents in Washington, DC (2023)
+
+**Link**: [Crime Incidents in 2023]https://opendata.dc.gov/datasets/DCGIS::crime-incidents-in-2023/explore?showTable=true
+**Description**: This dataset serves as the primary source for our analysis, encompassing 34,215 reported crime incidents in Washington, DC. It includes critical information such as the type of offense, time of occurrence, geographic location, and methods involved. This comprehensive dataset is essential for examining crime patterns and densities across different neighborhoods.
+
+## Neighborhood Clusters
+
+**Link**: [Neighborhood Clusters]https://catalog.data.gov/dataset/neighborhood-clusters/resource/39d2cb14-5d10-4ac2-916e-f5b78670fcb9?inner_span=True
+**Description**: This dataset provides a mapping of numerical identifiers for neighborhoods to more recognizable names, such as Columbia Heights, Georgetown, and Dupont Circle. By integrating this data, we enhance the interpretability of our analysis, making it easier for stakeholders to understand the geographic context of crime data.
+
+## DC Police Stations
+
+**Link**: [DC Police Stations]https://opendata.dc.gov/datasets/police-stations/explore?showTable=true
+**Description**: This dataset contains the locations of police stations across Washington, DC. Incorporating this information allows us to analyze the proximity of law enforcement resources to neighborhoods with varying crime rates, offering insights into potential coverage gaps.
+
+## Data Preparation
+
+We initiated the data preparation process by cleaning the primary dataset to address missing values and inconsistencies. Subsequently, we merged the neighborhood clusters dataset to replace numerical identifiers with descriptive names, thereby improving the clarity and usability of the analysis for various stakeholders. Additionally, we integrated police station data to analyze its influence on crime patterns, which may provide insights into effective resource allocation and community safety strategies.
+
+
+# 6. Discussion
+
+**Crime Trends:** Our analysis indicates that theft is the predominant type of crime in Washington, DC. Seasonal variations were evident, with significant spikes in crime during the summer months, particularly in July, likely due to increased outdoor activities and population density.
+
+**Impact of Events:** We observed a rise in crime rates in October 2023, coinciding with the "Rock the Park" event. This correlation highlights the need for enhanced security measures during large public gatherings, as such events can create opportunities for theft and other offenses.
+
+**Temporal Patterns:** The majority of crimes occurred during the evening hours, suggesting that law enforcement should increase visibility and patrols during these peak times, especially in identified crime hotspots.
+
+**Local vs. Tourist Criminality:** An important consideration is whether the individuals committing these crimes are local residents or tourists. Given DC's appeal as a tourist destination, understanding the demographics of offenders can inform targeted crime prevention strategies.
+
+**Clusters and Wards:** In our analysis, we divided Washington, DC, into clusters and wards to better understand regional crime dynamics. Notably, Ward 3 emerged as the safest area, while Wards 2 and 5 recorded significantly higher crime rates. This finding suggests that crime prevention efforts may need to be tailored to specific wards, particularly in areas experiencing elevated crime levels.
+
+**Policy Implications and Future Research:** The findings underscore the need for targeted policing strategies and community engagement initiatives to address high theft rates and seasonal crime spikes. Future research should investigate the effectiveness of these strategies and explore the demographics of offenders to gain a clearer understanding of crime dynamics in Washington, DC.
+
+**Limitations:** While this study provides valuable insights, it is important to acknowledge certain limitations. The analysis relies on reported crime data, which may not capture unreported incidents. Additionally, external factors such as changes in policing strategies or socio-economic conditions could influence crime rates and were not accounted for in this analysis. Our dataset also lacks information on the residency status of offenders, limiting our ability to assess whether crimes are committed by local residents or tourists. Future research should consider incorporating qualitative data to provide a more comprehensive view of the factors influencing crime.
