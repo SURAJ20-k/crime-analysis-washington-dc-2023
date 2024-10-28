@@ -600,6 +600,15 @@ offense_summary
 
 ```
 
+```{r}
+# Summarize total offenses by ward
+offense_total_by_ward <- crime_data2 %>%
+  group_by(WARD) %>%
+  summarise(Total_Offenses = n())
+
+# View the summarized data
+print(offense_total_by_ward)
+```
 
 
 ```{r}
@@ -779,6 +788,8 @@ contingency_table_shift_method <- table(crime_data2$SHIFT, crime_data2$METHOD)
 
 # first we will do  Chi-squared test
 chi_squared_result <- chisq.test(contingency_table_shift_method)
+
+
 
 print(chi_squared_result)
 ```
