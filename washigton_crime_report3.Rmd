@@ -117,6 +117,7 @@ PSA (Police Service Area): 298 records lack PSA information, which might impact 
 CENSUS_TRACT: 16 records are missing census tract data, which could slightly affect demographic or geographic analyses at the census level.
 OCTO_RECORD_ID: All 34,215 records are missing from the recoreds . 
 so, we have to remove all these recoreds for the eda. From the column named OCTO_RECORD_ID al 34,215 recoreds are missing, so we have to remove this column. We do not require that column. 
+del.
  
 
 ```{r}
@@ -573,7 +574,7 @@ ggplot(offense_by_month, aes(x = YearMonth, y = Count, group = 1)) +
 offense_by_shift_summary <- crime_data2 %>%
   group_by(SHIFT, OFFENSE) %>%
   summarise(Total_Offenses = n(), .groups = 'drop')
-
+# here we replace the barplot with pie chart
 
 ggplot(offense_by_shift_summary, aes(x = 2, y = Total_Offenses, fill = OFFENSE)) +
   geom_bar(stat = "identity", width = 1, color = "white") +
@@ -1135,7 +1136,7 @@ ggplot(dc_ward_gun_offenses) +
 ```
 ```{r}
 gun_offenses
-dc_ward_gun_offenses
+#dc_ward_gun_offenses
 #crime_data2
 
 ```
