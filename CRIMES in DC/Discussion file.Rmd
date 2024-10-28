@@ -14,31 +14,36 @@ The primary focus of our analysis is to explore crime density across different a
 
 # Data Sources
 
-## Crime Incidents in Washington, DC (2023)
+### Crime Incidents in Washington, DC (2023)
 
 **Link**: [Crime Incidents in 2023]https://opendata.dc.gov/datasets/DCGIS::crime-incidents-in-2023/explore?showTable=true
+
 **Description**: This dataset serves as the primary source for our analysis, encompassing 34,215 reported crime incidents in Washington, DC. It includes critical information such as the type of offense, time of occurrence, geographic location, and methods involved. This comprehensive dataset is essential for examining crime patterns and densities across different neighborhoods.
 
-## Neighborhood Clusters
+### Neighborhood Clusters
 
 **Link**: [Neighborhood Clusters]https://catalog.data.gov/dataset/neighborhood-clusters/resource/39d2cb14-5d10-4ac2-916e-f5b78670fcb9?inner_span=True
+
 **Description**: This dataset provides a mapping of numerical identifiers for neighborhoods to more recognizable names, such as Columbia Heights, Georgetown, and Dupont Circle. By integrating this data, we enhance the interpretability of our analysis, making it easier for stakeholders to understand the geographic context of crime data.
 
-## DC Police Stations
+### DC Police Stations
 
 **Link**: [DC Police Stations]https://opendata.dc.gov/datasets/police-stations/explore?showTable=true
+
 **Description**: This dataset contains the locations of police stations across Washington, DC. Incorporating this information allows us to analyze the proximity of law enforcement resources to neighborhoods with varying crime rates, offering insights into potential coverage gaps.
 
-## Data Preparation
+### Data Preparation
 
 We initiated the data preparation process by cleaning the primary dataset to address missing values and inconsistencies. Subsequently, we merged the neighborhood clusters dataset to replace numerical identifiers with descriptive names, thereby improving the clarity and usability of the analysis for various stakeholders. Additionally, we integrated police station data to analyze its influence on crime patterns, which may provide insights into effective resource allocation and community safety strategies.
 
 
 # 6. Discussion
 
-**Crime Trends:** Our analysis indicates that theft is the predominant type of crime in Washington, DC. Seasonal variations were evident, with significant spikes in crime during the summer months, particularly in July, likely due to increased outdoor activities and population density.
+### **Crime Trends:** 
+Our analysis indicates that theft is the predominant type of crime in Washington, DC. Seasonal variations were evident, with significant spikes in crime during the summer months, particularly in July, likely due to increased outdoor activities and population density.
 
-**Impact of Events:** We observed a rise in crime rates in October 2023, coinciding with the "Rock the Park" event. This correlation highlights the need for enhanced security measures during large public gatherings, as such events can create opportunities for theft and other offenses.
+### **Impact of Events:**
+We observed a rise in crime rates in October 2023, coinciding with the "Rock the Park" event. This correlation highlights the need for enhanced security measures during large public gatherings, as such events can create opportunities for theft and other offenses.
 
 **Temporal Patterns:** The majority of crimes occurred during the evening hours, suggesting that law enforcement should increase visibility and patrols during these peak times, especially in identified crime hotspots.
 
