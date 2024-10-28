@@ -1057,12 +1057,6 @@ heatmap(ward_offense_table, Rowv = NA, Colv = NA,
 # Step 4: Perform Chi-Square Test
 chi_square_ward_offense <- chisq.test(ward_offense_table)
 
-# Step 5: Print the results
-print("Contingency Table:")
-print(ward_offense_table)
-
-print("Chi-Square Test Results:")
-print(chi_square_ward_offense)
 
 # Step 6: Interpretation
 if (chi_square_ward_offense$p.value < 0.05) {
