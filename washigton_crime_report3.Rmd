@@ -1135,7 +1135,7 @@ ggplot(dc_ward_gun_offenses) +
 ```
 ```{r}
 gun_offenses
-#dc_ward_gun_offenses
+dc_ward_gun_offenses
 #crime_data2
 
 ```
