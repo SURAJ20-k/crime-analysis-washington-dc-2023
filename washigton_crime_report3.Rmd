@@ -759,7 +759,9 @@ we reject the null hypothesis (H0). This indicates that there is a statistically
 # Create the contingency table
 contingency_table_shift_offense <- table(crime_data2$SHIFT, crime_data2$OFFENSE)
 
+
 fisher_test_result <- fisher.test(contingency_table_shift_offense, simulate.p.value = TRUE)
+print(fisher_test_result)
 print(fisher_test_result)
 ```
 # 5.3 Chi-squard test( shift vs method)
@@ -881,6 +883,7 @@ results suggest that the use of "GUN" as an offense method varies significantly 
 gun_data <- crime_data2 %>%
   filter(METHOD == "GUN") %>%
   select(DISTRICT)
+
 
 # Step 2: Create a contingency table
 contingency_table <- table(gun_data$DISTRICT)
