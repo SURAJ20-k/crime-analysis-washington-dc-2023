@@ -23,7 +23,7 @@ options(scientific=T, digits = 3)
 
 ``` 
 
-#1) Introduction---- 
+# 1)Introduction---- 
 
 Introduction:
 In our project, we aim to investigate crime patterns in Washington, DC, utilizing data from the Open Data DC portal. The dataset, "Crime Incidents in 2023," comprises 34,215 observations detailing reported crimes, including information on the type of offense, time of occurrence, geographic location, and methods involved.
@@ -87,7 +87,7 @@ str(police_stations)
 
 ```
 
-#2.1) Library----
+# 2.1) Library----
 WE have loaded the required library here 
  ggplot2: Used for creating static visualizations, such as line graphs, bar charts, and scatter     plots.
   
@@ -109,7 +109,7 @@ library(lubridate) # fro thr data manupulation
 library(sf)
 library(leaflet) 
 ```
-#2.2) data collection--
+# 2.2) data collection--
 from the is.null operator , we got that there is no record in the OCTO_RECORD_ID column. total 34215 records are missing from the records.
 
 DISTRICT: 285 records are missing district details.
@@ -180,7 +180,7 @@ nrow(duplicate_crime_data)
 
 head(crime_data1)
 ```
-#2.3) Duplicate---
+# 2.3)Duplicate---
  so we don't have duplicate vlaues in the data set also . 
  
 now our data set is net and clean . 
@@ -252,7 +252,7 @@ str(crime_data2)
 # view the first 5 rows of the data set 
 head(crime_data2)
 ```
-#3) Summary Stastics--
+# 3) Summary Stastics--
 we examined the structure of the normalized dataset and viewed the first five rows to ensure everything was in order. This normalization step will significantly enhance the quality and reliability of our analysis moving forward.
 
 Now start the EDA- Exploratory Data Analysis
@@ -266,7 +266,7 @@ crime_data2 <- crime_data2 %>%
 summary(crime_data2)
 
 ``` 
-#3.1)key observation. 
+# 3.1)key observation. 
 1) report date- show the range of the date, when 1st offence dtae started to the last date of the offence date. even report date  information is avaible in the quater wise.
 
 2) most of the varibles are catogica like ward, shift, block, methods. 
@@ -308,7 +308,7 @@ offence_count <- crime_data2 %>%
 
 print(offence_count)
 ```
-#3.3) Offence_type Vs count--
+# 3.3) Offence_type Vs count--
 The numbers indicate that Theft from Auto and Motor Vehicle Theft are significant issues, highlighting the importance of vehicle security. and least with the Arson type of the offence. 
 
  now we are looking the offence by the shift wise with the count wise. mean we will know in which shift most of the offence happen, by which method as well as , which type of the offence. so that we can micro - analyze these things.
@@ -325,7 +325,7 @@ offence_by_shift <- crime_data2 %>%
 print(offence_by_shift)
 ```
 
-#3.4)crime count by shift 
+# 3.4)crime count by shift 
 
 count by method --
 Least Common Offenses---  The offenses with the lowest counts include various types of arson and sex abuse, predominantly occurring during the midnight and day shifts. Notably, arson incidents are quite rare, especially during evening and midnight hours.
@@ -352,7 +352,7 @@ offence_by_shift <- crime_data2 %>%
 print(offence_by_shift)
 
 ```
-#3.4) District Vs Count----
+# 3.4) District Vs Count----
 District 3 has the highest total count of offenses with 6612 incidents, indicating it may have higher crime activity or reporting in comparison to others.
 District 7 shows the lowest total count at 2883
 ```{r}
@@ -366,7 +366,7 @@ print(OFFENCE_BY_DISTRICT)
 As we know most of the varibles are catagorical - analyze the correlation between categorical columns in  dataset, we can use various methods since correlation typically applies to numerical data.
 But the numerical data we have like longitude and lattitude , as well as CNN, Report date , but we don;t require numerical data coraltion of this varible. 
 
-#4)EDA-- 
+# 4)EDA-- 
 
 # 4.1)crime count by shift....
 exploratory data analysis. 
@@ -402,7 +402,7 @@ ggplot(offense_by_shift_funnel, aes(x = SHIFT, y = Total_Offenses, fill = SHIFT)
 
 
 
-#4.2) Distrubution of crime offense
+# 4.2) Distrubution of crime offense
 
 distrubution of the crime offence by  type of the offence 
  
@@ -423,7 +423,7 @@ so the most common offence is Theft/other , followed by theft/auto ---
 
 most offense type in the Washigton D.C is theft , the 1st  other and on 2nd is vhehicle 
 
-#4.3) Distribution of different offenses by shift----
+# 4.3) Distribution of different offenses by shift----
  
 ```{r}
 
@@ -435,7 +435,7 @@ ggplot(crime_data2, aes(x = SHIFT, fill = OFFENSE)) +
   theme_minimal()
 
 ```
-#4.4)METHOD OF OFFENCE VS OFFENCE-------
+# 4.4)METHOD OF OFFENCE VS OFFENCE-------
 
 Robbery Offenses: We see a noticeable spike in robbery incidents during midnight, which is pretty significant. In fact, robbery offenses outnumber motor vehicle thefts during this time!
 
@@ -468,7 +468,7 @@ ggplot(crime_data2, aes(x = SHIFT, fill = METHOD)) +
 
 
 ```
-#4.6) Distrubution of offences bt ward-
+# 4.6) Distrubution of offences bt ward-
 As we can see, the most common offence in every ward with the highest pick is theft/auto and theft/oter. people take aways most of the things from your car, is the most common offence. 
 But as we can see,In the ward-3 every offence is at its least. 
 Highest variabily if the offence is in the ward 1 and 2nd but in ward-7 all offence are nearly in same propostion. 
@@ -499,7 +499,7 @@ In above graph we can see that  - ward 5  have more offence followed by 2
  Now as we can see from the 2nd month onward up to the 7th month. There is positive trend happend across the offence. And sfter july there is sudden drop of the offence till december expect 10th month , there is unexpected increasing graph for the oct month. 
 #
 
-#4.7) Seasonal Crime pattern 
+# 4.7) Seasonal Crime pattern 
 
 ```{r}
 
@@ -618,7 +618,7 @@ ggplot(offense_by_shift, aes(x = OFFENSE, y = Count, fill = SHIFT)) +
 
 
 
-#4.8) coorrelation--
+# 4.8) coorrelation--
 between numerical variables x,y ,ward, latitude , longitude  
 
 ```{r}
@@ -663,7 +663,7 @@ if (!requireNamespace("corrplot", quietly = TRUE)) {
 
 ```
 
-#4.8) Correlation plot.
+# 4.8) Correlation plot.
 
 In the correlation plot- we can see the correation between PSA and longitude is near about 0.62, PSA and WARD is about -0.52, district and ward - 0.54.
 from this Correlation plot, we can see their is relation between numerical data. 
@@ -707,11 +707,11 @@ library(devtools)
 library(DCmapR)
 #devtools::install_github("BingoLaHaye/DCmapR")
 ```
-#5) Stastical Test--
+# 5) Stastical Test--
 
 Lets start with the Stastical test now
 
-#5.1) Chi-Square Test Results - (shift and offence type)
+# 5.1) Chi-Square Test Results - (shift and offence type)
 chi-square test fir shift and offence type. 
 Null Hypothesis (H0): There is no association between Shift and Offense type.
 
@@ -742,7 +742,7 @@ print(chi_square_shift_offense)
 
 ```
 
-#5.2 Fisher-test (shift and offence type)
+# 5.2 Fisher-test (shift and offence type)
 As we can see that , we have  have less frequency than 5 in the shift. so we have a alter native test called as Fisher-test. 
 Reults from the Fisher-Test.
 
@@ -761,7 +761,7 @@ contingency_table_shift_offense <- table(crime_data2$SHIFT, crime_data2$OFFENSE)
 fisher_test_result <- fisher.test(contingency_table_shift_offense, simulate.p.value = TRUE)
 print(fisher_test_result)
 ```
-#5.3 Chi-squard test( shift vs method)
+# 5.3 Chi-squard test( shift vs method)
 Null Hypothesis (H0): There is no association between the shift and the method used in offenses (i.e., the distribution of methods is the same across shifts)
 Alternative Hypothesis (H1): There is an association between the shift and the method used in offenses (i.e., the distribution of methods varies across shifts).
 
@@ -794,7 +794,7 @@ print(fisher_result)
 ```{r}
 head(crime_data2)
 ```
-#5.5) ANOVA- Analysis of Variance,
+# 5.5) ANOVA- Analysis of Variance,
 
 from the below annova test, ans --  method used to commit offenses has a statistically significant effect on the count of offenses.  
 
@@ -933,7 +933,7 @@ print(paste("The district with the most 'GUN' offenses is:", most_offenses_distr
 ```
  The district with the most 'GUN' offenses is: 6 with 770 offenses."
  
-#5.6) Chi_square test ( Offence Type VS Method )
+# 5.6) Chi_square test ( Offence Type VS Method )
 ```{r}
 # Load necessary library
 library(dplyr)
@@ -1008,7 +1008,7 @@ p-value significantly less than 0.05, leading to the rejection of the null hypot
 the choice of method (GUN, KNIFE, OTHERS) varies depending on the type of offense.
 
 
-#5.7)#CHISQUARE TEST BETWEEN THE OFFENCE AND WARD --- 
+# 5.7)#CHISQUARE TEST BETWEEN THE OFFENCE AND WARD --- 
 
 A Chi-Square test was conducted to determine whether there was a statistically significant association between the ward and the offense type.
 
@@ -1057,7 +1057,7 @@ if (chi_square_ward_offense$p.value < 0.05) {
 }
 
 ```
-#5.8)ANNOVA for district and ward 
+# 5.8)ANNOVA for district and ward 
 let check there is signofocant relation betweent the district and ward 
 
 ```{r}
@@ -1090,8 +1090,12 @@ p-value that is less than 0.05 indicate that There are statistically significant
 library(tigris)
 dc_wards <- state_legislative_districts(state = "dc", class='sf')
 ```
+# Gun offence-
+In analyzing the crime data, we identified three primary methods of offense: Gun, Knife, and Other (which includes hands, sticks, rods, etc.). It is evident that gun-related offenses are associated with severe injuries and fatalities more frequently than other methods. Our findings indicate a strong correlation between gun offenses and specific wards and districts.
 
+Interestingly, the analysis revealed no significant relationship between knife offenses and the corresponding wards or districts. This suggests that knife-related incidents are relatively isolated or less prevalent in comparison to gun offenses.
 
+Given this insight, it is crucial to focus on the areas with high incidences of gun violence. By identifying these wards, law enforcement can strategically increase police surveillance and potentially establish additional police stations in hotspots. This proactive approach aims to enhance public safety and reduce gun-related incidents.
 
 
 ```{r}
@@ -1100,6 +1104,11 @@ library(tidyverse)
 library(sf)
 library(dplyr)
 library(ggplot2)
+
+gun_offenses <- crime_data2 %>%
+  filter(METHOD == "GUN") %>%
+  group_by(WARD) %>%
+  summarize(gun_offense_count = n())
 
 # Ensure the WARD column in gun_offenses is a character and match the format of NAMELSAD
 gun_offenses <- gun_offenses %>%
@@ -1126,19 +1135,77 @@ ggplot(dc_ward_gun_offenses) +
 ```
 ```{r}
 gun_offenses
-dc_ward_gun_offenses
+#dc_ward_gun_offenses
+#crime_data2
+
+```
+```{r}
+# get tge boundries by districts.
+dc_districts <- state_legislative_districts(state = "dc", class = 'sf')
+
+
+
+
 ```
 
 
 
 
+# MAP conculsion by- 
+# 1) Offenses by Ward in Washington, DC (Midnight Shift & Robbery)--
+
+Ward-7 is red hot shopt regarding the offences in midnight for robbery. 
+followed by ward 2. 
+The least offences or safe area in the washigton is ward-3 . 
+
+
+```{r}
+# Load necessary libraries
+library(tidyverse)
+library(sf)
+library(dplyr)
+library(ggplot2)
+
+# Filter the crime_data2 dataset for gun offenses during the midnight shift and robbery offenses
+gun_offenses <- crime_data2 %>%
+  filter(METHOD == "GUN", SHIFT == "MIDNIGHT", OFFENSE == "ROBBERY") %>%  # Add filters for shift and offense
+  group_by(WARD) %>%
+  summarize(gun_offense_count = n(), .groups = 'drop')  # Count occurrences
+
+# Ensure the WARD column in gun_offenses is a character and match the format of NAMELSAD
+gun_offenses <- gun_offenses %>%
+   mutate(WARD = paste("Ward", as.character(WARD)))  # Add "Ward " prefix if needed
+
+# Merge dc_wards with gun offense counts
+dc_ward_gun_offenses <- dc_wards %>%
+  left_join(gun_offenses, by = c("NAMELSAD" = "WARD"))
+
+# Check the structure of the merged data to confirm join
+print(dim(dc_ward_gun_offenses))  # Print dimensions
+print(head(dc_ward_gun_offenses))  # Preview the first few rows
+
+# Plot the map
+ggplot(dc_ward_gun_offenses) +
+  geom_sf(aes(fill = gun_offense_count), color = "black") +  # Color by gun offense count
+  geom_sf_label(aes(label = paste0(NAMELSAD, "\n", gun_offense_count)), size = 3) +  # Add ward labels
+  scale_fill_gradient(low = "lightyellow", high = "red", na.value = "gray") +  # Color scale
+  labs(title = "Gun Offenses by Ward in Washington, DC (Midnight Shift & Robbery)", fill = "Gun Offenses") +
+  theme_minimal() +
+  theme(panel.grid = element_blank())
+
+```
+# Summary of Findings by map----
+Our analysis reveals that Ward 7 is identified as a significant hotspot for midnight robbery offenses, demonstrating the highest concentration of gun-related crimes during this timeframe. This alarming trend necessitates immediate attention from law enforcement agencies to enhance safety and security measures in the area.
+
+Following closely is Ward 2, which also exhibits a notable frequency of gun offenses. The patterns observed in these wards suggest that targeted interventions, such as increased police presence and community outreach initiatives, are essential to mitigate the risks associated with these high-crime zones.
+
+In stark contrast, Ward 3 emerges as the safest area in Washington, DC, exhibiting the least number of gun offenses. This relative security indicates effective community safety practices and law enforcement strategies that could be analyzed and potentially replicated in more troubled wards.
+
+Overall, these findings underscore the importance of strategic resource allocation to combat gun violence effectively. Enhanced surveillance and police visibility in Wards 7 and 2, combined with community engagement programs, could play a crucial role in reducing criminal activity and fostering safer neighborhoods.
 
 
 
-
-
-
-#6 Discussion--
+# 6 Discussion--
 
 Crime Trends: Our analysis indicates that theft is the predominant type of crime in Washington, DC. Seasonal variations were evident, with significant spikes in crime during the summer months, particularly in July, likely due to increased outdoor activities and population density.
 
@@ -1154,6 +1221,12 @@ Policy Implications and Future Research: The findings underscore the need for ta
 
 Limitations: While this study provides valuable insights, it is important to acknowledge certain limitations. The analysis relies on reported crime data, which may not capture unreported incidents. Additionally, external factors such as changes in policing strategies or socio-economic conditions could influence crime rates and were not accounted for in this analysis. Our dataset also lacks information on the residency status of offenders, limiting our ability to assess whether crimes are committed by local residents or tourists. Future research should consider incorporating qualitative data to provide a more comprehensive view of the factors influencing crime.
 
+# Recommendations
+1)Increase Police Surveillance:
+  Focus on wards with high gun offense rates to deter criminal activity.
+  
+2)Establish More Police Stations:
+    Consider placing police stations in areas identified as gun offense hotspots to improve               response times and community engagement.
 
 
 
@@ -1162,8 +1235,7 @@ Limitations: While this study provides valuable insights, it is important to ack
 
 
 
-
-#7)-conclusion 
+# 7)-conclusion 
 
 
 This project aimed to investigate crime patterns in Washington, DC, using data from the Open Data DC portal. We focused on several key areas: identifying geographical crime hotspots, determining the most common offenses, analyzing variations in crime rates across different times of day, months, and seasons, and examining the prevalence of offenses involving firearms and knives compared to other methods.
