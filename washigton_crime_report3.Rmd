@@ -1056,6 +1056,12 @@ heatmap(ward_offense_table, Rowv = NA, Colv = NA,
 
 # Step 4: Perform Chi-Square Test
 chi_square_ward_offense <- chisq.test(ward_offense_table)
+# Step 5: Print the results
+print("Contingency Table:")
+print(ward_offense_table)
+
+print("Chi-Square Test Results:")
+print(chi_square_ward_offense)
 
 
 # Step 6: Interpretation
@@ -1089,7 +1095,7 @@ if (p_value < 0.05) {
 ```
 p-value that is less than 0.05 indicate that There are statistically significant differences in crime rates across different wards, meaning some wards experience higher or lower crime rates than others.
 
-
+p-value that is less than 0.05 indicate that There are statistically significant differences in crime rates across different wards, meaning some wards experience higher or lower crime rates than others.
 
 
 # Maps Of the DC 
