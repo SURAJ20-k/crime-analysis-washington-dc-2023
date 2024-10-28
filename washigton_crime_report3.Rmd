@@ -1243,7 +1243,17 @@ Limitations: While this study provides valuable insights, it is important to ack
 2)Establish More Police Stations:
     Consider placing police stations in areas identified as gun offense hotspots to improve               response times and community engagement.
 
+#Analysis Summary
+In this analysis, we observed gun offenses related to robbery occurring at midnight in Washington, DC. Based on the data, we found significant insights regarding the distribution of these offenses across different wards:
 
+Gun Offense Trends:
+
+The analysis indicated that gun offenses are notably concentrated in certain wards during the midnight shift.
+Ward 7 emerged as a hotspot, showing the highest frequency of gun-related robbery offenses.
+Following closely is Ward 2, which also demonstrated a significant number of incidents.
+Comparative Safety:
+
+In contrast, Ward 3 was identified as the safest area with the least occurrences of gun offenses, suggesting it may have effective crime prevention measures in place.
 
 
 
