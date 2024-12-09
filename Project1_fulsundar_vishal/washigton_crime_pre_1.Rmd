@@ -1984,6 +1984,8 @@ legend("topright", legend = c("ARIMA", "ETS", "Stacked Ensemble"),
 library(forecast)
 library(caret)
 
+
+
 # Convert the REPORT_DAT column to Date format (if not already done)
 crime_data2$REPORT_DAT <- as.Date(crime_data2$REPORT_DAT)
 
