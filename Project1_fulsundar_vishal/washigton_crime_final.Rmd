@@ -1700,115 +1700,10 @@ data_selected <- data_selected %>% drop_na()
 str(data_selected)
 
 ```
-```{r}
-data_selected$METHODGUN <- as.factor(data_selected$METHODGUN)
-
-
-library(caret)
-
-# Set seed for reproducibility
-set.seed(123)
-
-# Split the data into training (80%) and testing (20%) sets
-trainIndex <- createDataPartition(data_selected$METHODGUN, p = .8, 
-                                  list = FALSE, 
-                                  times = 1)
-
-train_data <- data_selected[trainIndex,]
-test_data  <- data_selected[-trainIndex,]
 
 
 
-library(randomForest)
-
-# Train the Random Forest model
-rf_model <- randomForest(METHODGUN ~ Month + Day + ANC + PSA + X + Y + 
-                         OFFENSEASSAULT_W_DANGEROUS_WEAPON + OFFENSEMOTOR_VEHICLE_THEFT + 
-                         OFFENSEROBBERY + WARD2 + WARD3 + WARD5 + WARD6 + WARD7 + WARD8 + 
-                         SeasonSpring + SeasonSummer + SeasonWinter, data = train_data)
-
-# Display the model summary
-print(rf_model)
-
-
-
-
-```
-
-```{r}
-# Get predicted probabilities (for ROC and AUC) on the training data
-pred_probs_train <- predict(rf_model, train_data, type = "prob")
-
-# Extract probabilities for the positive class (METHODGUN = 1)
-prob_pos_class_train <- pred_probs_train[, 2]
-
-# Calculate ROC curve for the training data
-roc_curve_train <- roc(train_data$METHODGUN, prob_pos_class_train)
-
-# Plot the ROC curve for the training data
-plot(roc_curve_train, main = "ROC Curve (Train Data)", col = "blue", lwd = 2)
-
-# Calculate AUC for the training data
-auc_value_train <- auc(roc_curve_train)
-
-# Print AUC value
-print(paste("AUC (Train Data): ", auc_value_train))
-```
-
-
-
-
-
-```{r}
-# Predictions on the test data
-predictions <- predict(rf_model, test_data)
-
-# Evaluate performance using confusion matrix
-confusionMatrix(predictions, test_data$METHODGUN)
-
-
-# Calculate accuracy
-accuracy <- mean(predictions == test_data$METHODGUN)
-print(paste("Accuracy: ", accuracy))
-
-
-# Tuning the Random Forest model (optional)
-rf_tune <- train(METHODGUN ~ Month + Day + ANC + PSA + X + Y + 
-                 OFFENSEASSAULT_W_DANGEROUS_WEAPON + OFFENSEMOTOR_VEHICLE_THEFT + 
-                 OFFENSEROBBERY + WARD2 + WARD3 + WARD5 + WARD6 + WARD7 + WARD8 + 
-                 SeasonSpring + SeasonSummer + SeasonWinter, 
-                 data = train_data, 
-                 method = "rf", 
-                 trControl = trainControl(method = "cv", number = 5))
-
-# Best model after tuning
-print(rf_tune$bestTune)
-
-
-```
-
-```{r}
-# Get predicted probabilities (not class labels)
-pred_probs <- predict(rf_model, test_data, type = "prob")
-
-# The probabilities for the positive class (METHODGUN = 1) are in the second column
-prob_pos_class <- pred_probs[, 2]
-
-# Calculate ROC curve
-roc_curve <- roc(test_data$METHODGUN, prob_pos_class)
-
-# Plot ROC curve
-plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2)
-# Calculate AUC
-auc_value <- auc(roc_curve)
-
-# Print AUC
-print(paste("AUC: ", auc_value))
- 
-
-
-```
-
+# model1
 ```{r}
 # Load necessary libraries
 library(caret)
@@ -1865,6 +1760,9 @@ legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty =
 
 ```
 
+
+
+#model 2
 ```{r}
 # Load required libraries
 library(randomForest)
@@ -1884,12 +1782,12 @@ formula <- METHODGUN ~ .
 # Hyperparameter tuning with caret
 control <- trainControl(method = "cv", number = 5) # 5-fold cross-validation
 
-# Define a grid for hyperparameter tuning (only mtry allowed for randomForest)
+# Define a grid for hyperparameter tuning, only including 'mtry'
 tune_grid <- expand.grid(
-  mtry = c(2, 4, 6) # Number of variables randomly selected at each split
+  mtry = c(1, 2, 3)               # Number of variables randomly selected at each split
 )
 
-# Train the Random Forest model
+# Train the Random Forest model with updated hyperparameters
 set.seed(42)
 rf_model <- train(
   formula,
@@ -1901,14 +1799,15 @@ rf_model <- train(
 )
 
 # Best hyperparameters
+cat("Best Hyperparameters:\n")
 print(rf_model$bestTune)
 
 # Final model with best parameters
 final_rf_model <- rf_model$finalModel
 
 # Evaluate model performance
-train_preds <- predict(final_rf_model, train_data)
-test_preds <- predict(final_rf_model, test_data)
+train_preds <- predict(final_rf_model, train_data, type = "response")
+test_preds <- predict(final_rf_model, test_data, type = "response")
 
 # Confusion matrix (train and test data)
 conf_matrix_train <- confusionMatrix(train_preds, train_data$METHODGUN)
@@ -1942,10 +1841,160 @@ legend("bottomright", legend = c("Train ROC", "Test ROC"), col = c("blue", "red"
 
 ```
 
+
+
 ```{r}
+# Sample data: accuracy values for Model 1 and Model 3 for train and test sets
+accuracy_model1_train <- c(0.983)  # Example values for Model 1 (train)
+accuracy_model1_test <- c(0.939)   # Example values for Model 1 (test)
+accuracy_model3_train <- c(0.998)  # Example values for Model 3 (train)
+accuracy_model3_test <- c(0.942)   # Example values for Model 3 (test)
+
+# Combine the data into two groups
+accuracy_model1 <- c(accuracy_model1_train, accuracy_model1_test)
+accuracy_model3 <- c(accuracy_model3_train, accuracy_model3_test)
+
+# Perform One-Way ANOVA
+anova_result <- aov(c(accuracy_model1, accuracy_model3) ~ factor(c(rep(1, length(accuracy_model1)), rep(2, length(accuracy_model3)))))
+summary(anova_result)
+
+
+
+# Paired t-test between Model 1 and Model 3 on accuracy (for train and test)
+t_test_result <- t.test(accuracy_model1, accuracy_model3, paired = TRUE)
+print(t_test_result)
+
+
+
+
+# Wilcoxon signed-rank test for Model 1 and Model 3 on accuracy (train and test)
+wilcoxon_result <- wilcox.test(accuracy_model1, accuracy_model3, paired = TRUE)
+print(wilcoxon_result)
+
+
+
+
+# Example data for multiple metrics (accuracy, sensitivity, specificity)
+accuracy_model1 <- c(0.983, 0.939)
+sensitivity_model1 <- c(0.92, 0.85)
+specificity_model1 <- c(0.95, 0.91)
+
+accuracy_model3 <- c(0.998, 0.942)
+sensitivity_model3 <- c(0.93, 0.87)
+specificity_model3 <- c(0.96, 0.93)
+
+# Combine the data into a data frame
+df <- data.frame(
+  accuracy = c(accuracy_model1, accuracy_model3),
+  sensitivity = c(sensitivity_model1, sensitivity_model3),
+  specificity = c(specificity_model1, specificity_model3),
+  model = factor(rep(c("Model 1", "Model 3"), each = 2))
+)
+
+
+
+```
+# result 
+no significant difference between the models, you can conclude that Model 1 and Model 3 are statistically similar in terms of accuracy based on the current data and metrics used.
+
+```{r}
+# Load necessary libraries
+library(forecast)
+library(tidyverse)
+
+# Convert the REPORT_DAT column to Date type if it's not already
+data_selected$REPORT_DAT <- as.Date(data_selected$REPORT_DAT, format="%Y-%m-%d")
+
+# Extract year and month from REPORT_DAT to create a "Month" variable
+data_selected$YearMonth <- format(data_selected$REPORT_DAT, "%Y-%m")
+
+# Aggregate the data by month, calculating the mean of ANC (or another variable) per month
+monthly_data <- data_selected %>%
+  group_by(YearMonth) %>%
+  summarise(ANC = mean(ANC))
+
+# Convert to time series (monthly data)
+ts_data_monthly <- ts(monthly_data$ANC, frequency=36, start=c(2023, 1))  # 12 for monthly data
+
+# Plot the time series to visualize it
+plot(ts_data_monthly, main="ANC Monthly Time Series (2023)", ylab="ANC", xlab="Month")
+
+
+
+
 
 ```
 
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+# Fit the ETS model
+ets_model_monthly <- ets(ts_data_monthly)
+
+# Summary of the ETS model
+summary(ets_model_monthly)
+
+# Forecast for the next 24 months (2024 and 2025)
+forecast_ets_monthly <- forecast(ets_model_monthly, h=24)  # 24 months for 2024 and 2025
+
+# Plot the ETS forecast
+plot(forecast_ets_monthly, main="ETS Monthly Forecast for 2024 and 2025")
+
+
+
+```
+
+
+
+```{r}
+# Plot the ETS forecast for 24 months (2024 and 2025)
+plot(forecast_ets_monthly, main="ETS Monthly Forecast for 2024 and 2025")
+
+# Print the forecasted values
+forecast_ets_monthly
+
+
+
+```
+```{r}
+library(forecast)
+
+# Assuming 'ts_data_monthly' is your time series object with monthly data
+
+# Fit a SARIMA model
+sarima_model <- auto.arima(ts_data_monthly, seasonal = TRUE, stepwise = TRUE, approximation = FALSE)
+
+# Summary of the SARIMA model
+summary(sarima_model)
+# Forecast the next 24 months (2 years)
+sarima_forecast <- forecast(sarima_model, h = 24)
+
+# Plot the forecast
+plot(sarima_forecast, main="SARIMA Forecast for 2024 and 2025")
+
+# Print the forecasted values
+sarima_forecast
+
+
+# Forecast for 24 months (2024 and 2025)
+forecast_arima <- forecast(ts_data_monthly, h = 24)
+
+# Plot the forecast
+plot(forecast_arima, main = "ARIMA(0,1,0) Forecast for 2024 and 2025")
+
+# View forecast values
+forecast_arima
+
+
+
+```
 
 
 
