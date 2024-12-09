@@ -1768,7 +1768,7 @@ cat("\nConfusion Matrix (Test Data):\n")
 print(confusionMatrix(test_classes, as.factor(test_data$METHODGUN)))
 
 # Plot ROC curves
-plot(roc_train, col = "blue", main = "ROC Curve: Test")
+plot(roc_train, col = "blue", main = "ROC Curve: Test VS TRAIN ")
 lines(roc_test, col = "red")
 legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty = 1)
 
@@ -1776,7 +1776,7 @@ legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty =
 plot(
   roc_test,
   col = "red",
-  main = "ROC Curve for Test Data",
+  main = "ROC Curve",
   lwd = 2,
   legacy.axes = TRUE,
   xlab = "False Positive Rate",
@@ -1879,7 +1879,7 @@ ts_data_monthly <- ts(monthly_data$ANC, frequency=48, start=c(2023, 1))  # 12 fo
 # Plot the time series to visualize it
 plot(ts_data_monthly, main="ANC Monthly Time Series (2023)", ylab="ANC", xlab="Month")
 
-
+str(data_selected)
 
 
 
@@ -1955,4 +1955,217 @@ sarima_forecast
 
 ```
 
+
+```{r}
+gun_data <- crime_data2 %>% filter(METHOD == "GUN")
+
+```
+
+
+```{r}
+summary(gun_data)
+
+```
+
+```{r}
+# Assuming `data_selected` contains latitude and longitude for each crime event
+library(dplyr)
+library(ggplot2)
+library(forecast)
+
+# Aggregate crime data by Year, Month, and geographic area (e.g., by districts or bins)
+data_selected <- data_selected %>%
+  mutate(YearMonth = format(REPORT_DAT, "%Y-%m"),  # Create YearMonth
+         Region = paste0("Lat_", round(LATITUDE, 1), "_Lon_", round(LONGITUDE, 1)))  # Create a region identifier
+
+# Aggregate crime data by YearMonth and Region
+crime_geo_data <- data_selected %>%
+  group_by(YearMonth, Region) %>%
+  summarise(Crimes = n())  # Count of crimes per region and time period
+
+# Convert aggregated data to time series for a specific region
+crime_ts <- ts(crime_geo_data$Crimes, start = c(2023, 1), frequency = 12)
+
+# Fit a SARIMA model or ETS model
+sarima_model <- auto.arima(crime_ts, seasonal = TRUE)
+
+# Forecast the next 24 months
+sarima_forecast <- forecast(sarima_model, h = 24)
+
+# Plot the forecast
+plot(sarima_forecast, main = "Crime Forecast for 2024-2025 (Geospatial)")
+
+
+
+# Fit the ETS model
+ets_model_monthly <- ets(ts_data_monthly)
+
+# Summary of the ETS model
+summary(ets_model_monthly)
+
+# Forecast for the next 24 months (2024 and 2025)
+forecast_ets_monthly <- forecast(ets_model_monthly, h=24)  # 24 months for 2024 and 2025
+
+# Plot the ETS forecast
+plot(forecast_ets_monthly, main="ETS Monthly Forecast for 2024 and 2025")
+
+# Print the forecasted values
+print(forecast_ets_monthly)
+
+# Add a summary for the forecast plot
+cat("Summary of ETS Forecast:\n")
+cat("The forecast for the next 24 months (2024 and 2025) shows a trend of", 
+    ifelse(forecast_ets_monthly$mean[1] > forecast_ets_monthly$mean[length(forecast_ets_monthly$mean)], 
+           "declining", "increasing"), 
+    "values. The forecast indicates possible seasonality, with variations in the crime count across months. The confidence intervals indicate high uncertainty during the forecast period, especially for months farther in the future.")
+
+# Fit a SARIMA model
+sarima_model <- auto.arima(ts_data_monthly, seasonal = TRUE, stepwise = TRUE, approximation = FALSE)
+
+# Summary of the SARIMA model
+summary(sarima_model)
+
+# Forecast the next 24 months (2 years)
+sarima_forecast <- forecast(sarima_model, h = 24)
+
+# Plot the SARIMA forecast
+plot(sarima_forecast, main="SARIMA Forecast for 2024 and 2025")
+
+# Print the forecasted values
+print(sarima_forecast)
+
+# Add a summary for the SARIMA plot
+cat("\nSummary of SARIMA Forecast:\n")
+cat("The SARIMA forecast for the next 24 months (2024 and 2025) shows trends and seasonality. The forecast indicates", 
+    ifelse(sarima_forecast$mean[1] > sarima_forecast$mean[length(sarima_forecast$mean)], 
+           "a decreasing", "an increasing"), 
+    "pattern in the data. The forecasted values demonstrate significant variability in crime counts across different months, with higher levels of uncertainty towards the end of the forecast period.")
+
+
+
+
+library(ggplot2)
+library(forecast)
+
+# Fit a SARIMA model
+sarima_model <- auto.arima(crime_ts, seasonal = TRUE)
+
+# Forecast the next 24 months (2024 and 2025)
+sarima_forecast <- forecast(sarima_model, h = 24)
+
+# Create a data frame for the forecasted values and dates
+forecast_data <- data.frame(
+  Date = seq(as.Date("2024-01-01"), by = "month", length.out = 24),
+  Forecast = sarima_forecast$mean
+)
+
+# Plot using ggplot2 with custom x-axis labels
+ggplot(forecast_data, aes(x = Date, y = Forecast)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Crime Forecast for 2024-2025 (Geospatial)", x = "Date", y = "Forecasted Crime Count") +
+  scale_x_date(labels = scales::date_format("%b %Y"), breaks = "3 months") +  # Adjust breaks here
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate labels for clarity
+
+
+```
+
+
+```{r}
+
+
+gun_data %>%
+  group_by(SHIFT) %>%
+  summarise(Count = n()) %>%
+  ggplot(aes(x = SHIFT, y = Count, fill = SHIFT)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Gun-Related Crimes by Shift", x = "Shift", y = "Count")
+
+```
+```{r}
+
+
+gun_data %>%
+  group_by(DISTRICT) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ggplot(aes(x = reorder(DISTRICT, Count), y = Count, fill = DISTRICT)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Gun-Related Crimes by District", x = "District", y = "Count")
+
+```
+```{r}
+gun_data %>%
+  group_by(NEIGHBORHOOD_CLUSTER) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ggplot(aes(x = reorder(NEIGHBORHOOD_CLUSTER, Count), y = Count, fill = NEIGHBORHOOD_CLUSTER)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Gun-Related Crimes by Neighborhood Cluster", x = "Neighborhood Cluster", y = "Count")
+
+```
+```{r}
+gun_data %>%
+  group_by(OFFENSE) %>%
+  summarise(Count = n()) %>%
+  arrange(desc(Count)) %>%
+  ggplot(aes(x = reorder(OFFENSE, Count), y = Count, fill = OFFENSE)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Offense Types in Gun-Related Crimes", x = "Offense", y = "Count")
+
+```
+
+```{r}
+gun_data %>%
+  group_by(WARD) %>%
+  summarise(Count = n()) %>%
+  ggplot(aes(x = reorder(WARD, Count), y = Count, fill = WARD)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Gun-Related Crimes by Ward", x = "Ward", y = "Count")
+
+```
+```{r}
+gun_data %>%
+  group_by(Season) %>%
+  summarise(Count = n()) %>%
+  ggplot(aes(x = Season, y = Count, fill = Season)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Gun-Related Crimes by Season", x = "Season", y = "Count")
+
+```
+```{r}
+
+
+library(ggplot2)
+library(ggmap)
+
+ggplot(gun_data, aes(x = LONGITUDE, y = LATITUDE)) +
+  geom_density2d() +
+  stat_density2d(aes(fill = ..level..), geom = "polygon") +
+  scale_fill_viridis_c() +
+  labs(title = "Heatmap of Gun-Related Crimes", x = "Longitude", y = "Latitude")
+
+```
+```{r}
+gun_data %>%
+  filter(Year == 2023) %>%  # Filter for the year 2023
+  group_by(Month) %>%      # Group by month
+  summarise(Count = n()) %>%  # Summarize the count of crimes
+  arrange(match(Month, month.abb)) %>%  # Arrange months in proper order
+  ggplot(aes(x = Month, y = Count, fill = Month)) +
+  geom_bar(stat = "identity") +  # Create a bar plot
+  labs(
+    title = "Gun-Related Crimes in 2023 by Month",
+    x = "Month",
+    y = "Count"
+  ) +
+  theme_minimal() +  # Use a minimal theme
+  scale_fill_brewer(palette = "Set3")  # Add a color palette
+
+```
 
