@@ -1704,6 +1704,125 @@ lines(roc_test, col = "red")
 legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty = 1)
 
 ```
+```{r}
+library(ggplot2)
+
+# Class distribution before oversampling
+ggplot(data_selected, aes(x = METHODGUN)) +
+  geom_bar(fill = "steelblue") +
+  ggtitle("Class Distribution Before Oversampling") +
+  xlab("METHODGUN") +
+  ylab("Count") +
+  theme_minimal()
+
+# Class distribution after oversampling
+ggplot(balanced_data, aes(x = METHODGUN)) +
+  geom_bar(fill = "darkorange") +
+  ggtitle("Class Distribution After Oversampling") +
+  xlab("METHODGUN") +
+  ylab("Count") +
+  theme_minimal()
+
+
+# Feature importance from the Random Forest model
+importance_df <- as.data.frame(importance(rf_model))
+importance_df$Feature <- rownames(importance_df)
+
+# Plot feature importance
+ggplot(importance_df, aes(x = reorder(Feature, MeanDecreaseGini), y = MeanDecreaseGini)) +
+  geom_bar(stat = "identity", fill = "forestgreen") +
+  coord_flip() +
+  ggtitle("Feature Importance (Random Forest)") +
+  xlab("Features") +
+  ylab("Mean Decrease in Gini") +
+  theme_minimal()
+
+
+# Add predicted class to test data
+test_data$Predicted <- test_classes
+
+# Filter misclassified instances
+misclassified <- test_data[test_data$Predicted != test_data$METHODGUN, ]
+
+# Summarize misclassified instances
+print("Misclassified Instances:")
+print(misclassified)
+
+# Visualize misclassified proportions
+ggplot(misclassified, aes(x = Predicted, fill = as.factor(METHODGUN))) +
+  geom_bar(position = "dodge") +
+  ggtitle("Misclassified Instances in Test Data") +
+  xlab("Predicted Class") +
+  ylab("Count") +
+  scale_fill_manual(values = c("red", "blue"), 
+                    name = "Actual Class", 
+                    labels = c("Class 0", "Class 1")) +
+  theme_minimal()
+
+
+# Add predicted class to test data
+test_data$Predicted <- test_classes
+
+# Filter correctly classified instances
+correctly_classified <- test_data[test_data$Predicted == test_data$METHODGUN, ]
+
+# Summarize correctly classified instances
+print("Correctly Classified Instances:")
+print(correctly_classified)
+
+# Visualize correctly classified proportions
+ggplot(correctly_classified, aes(x = Predicted, fill = as.factor(METHODGUN))) +
+  geom_bar(position = "dodge") +
+  ggtitle("Correctly Classified Instances in Test Data") +
+  xlab("Predicted Class") +
+  ylab("Count") +
+  scale_fill_manual(values = c("green", "blue"), 
+                    name = "Actual Class", 
+                    labels = c("Class 0", "Class 1")) +
+  theme_minimal()
+
+
+# Add predicted class to test data
+test_data$Predicted <- test_classes
+
+# Create a classification status column
+test_data$Status <- ifelse(test_data$Predicted == test_data$METHODGUN, "Correctly Classified", "Misclassified")
+
+# Plot for test data
+ggplot(test_data, aes(x = Predicted, fill = Status)) +
+  geom_bar(position = "dodge") +
+  ggtitle("Classification Status in Test Data") +
+  xlab("Predicted Class") +
+  ylab("Count") +
+  scale_fill_manual(values = c("green", "red"), 
+                    name = "Status", 
+                    labels = c("Correctly Classified", "Misclassified")) +
+  theme_minimal()
+
+
+
+
+
+# Add predicted class to train data
+train_data$Predicted <- train_classes
+
+# Create a classification status column
+train_data$Status <- ifelse(train_data$Predicted == train_data$METHODGUN, "Correctly Classified", "Misclassified")
+
+# Plot for train data
+ggplot(train_data, aes(x = Predicted, fill = Status)) +
+  geom_bar(position = "dodge") +
+  ggtitle("Classification Status in Train Data") +
+  xlab("Predicted Class") +
+  ylab("Count") +
+  scale_fill_manual(values = c("green", "red"), 
+                    name = "Status", 
+                    labels = c("Correctly Classified", "Misclassified")) +
+  theme_minimal()
+
+
+
+```
 
 
 # model Random_forest 
