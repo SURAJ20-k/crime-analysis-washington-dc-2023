@@ -1983,14 +1983,6 @@ plot(sarima_forecast, main="SARIMA Forecast for 2024 and 2025")
 sarima_forecast
 
 
-# Forecast for 24 months (2024 and 2025)
-forecast_arima <- forecast(ts_data_monthly, h = 24)
-
-# Plot the forecast
-plot(forecast_arima, main = "ARIMA(0,1,0) Forecast for 2024 and 2025")
-
-# View forecast values
-forecast_arima
 
 
 
