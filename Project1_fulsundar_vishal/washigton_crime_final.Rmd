@@ -1701,6 +1701,9 @@ plot(roc_curve, main = "ROC Curve for OFFENSEMOTOR_VEHICLE_THEFT Prediction")
 
 
 ```
+```{r}
+str(selected_features)
+```
 
 
 
