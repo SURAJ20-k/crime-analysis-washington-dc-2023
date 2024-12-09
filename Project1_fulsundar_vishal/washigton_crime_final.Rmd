@@ -1442,36 +1442,6 @@ print(cor_matrix)
 ```
 
 ```{r}
-# Install and load required libraries
-if(!require(corrplot)) {
-  install.packages("corrplot")
-}
-library(corrplot)
-
-# Compute the correlation matrix
-cor_matrix <- cor(data[, sapply(data, is.numeric)], use="complete.obs")
-
-# Open a larger PNG device to save the plot
-png("correlation_heatmap.png", width=2000, height=2000, res=150)
-
-# Create the correlation plot with adjustments
-corrplot(cor_matrix, 
-         method="circle",               # Use circles to represent correlations
-         type="upper",                  # Display only the upper triangle of the matrix
-         order="hclust",                # Use hierarchical clustering for ordering
-         tl.col="black",                # Label color
-         tl.srt=45,                     # Rotate text labels
-         addCoef.col="black",           # Add correlation coefficients to the plot
-         number.cex=0.7,                # Adjust the size of numbers
-         col=brewer.pal(n=8, name="RdBu"), # Color palette for better contrast
-         diag=FALSE,                    # Exclude the diagonal from the plot
-         cl.lim=c(-1, 1),               # Set the color scale limits
-         cex.main=1.5,                  # Increase the title size
-         cex.lab=1.2,                   # Adjust label sizes
-         cex.axis=1.2)                  # Adjust axis label size
-
-# Close the PNG device after rendering the plot
-dev.off()
 
 
 
@@ -1492,11 +1462,11 @@ library(dplyr)
 str(data)
 # Select relevant features for modeling from the 'data' dataset
 selected_features <- data %>%
-  select(`ANC`, `PSA`, `X`, `Y`, `LATITUDE`, `LONGITUDE`, 
+  select( `REPORT_DAT`,`Month`,`Day`, `ANC`, `PSA`, `X`, `Y`, `LATITUDE`, `LONGITUDE`, 
          `OFFENSEASSAULT W/DANGEROUS WEAPON`, 
          `OFFENSEMOTOR VEHICLE THEFT`, 
          `OFFENSEROBBERY`, 
-         `WARD2`, `WARD3`, `WARD5`, `WARD6`, 
+         `WARD2`, `WARD3`, `WARD5`, `WARD6`, `WARD7`,`WARD8`,`SeasonSpring`,`SeasonSummer`,`SeasonWinter`,
          `METHODGUN`)
 
 # Remove rows with missing values
@@ -1702,10 +1672,198 @@ plot(roc_curve, main = "ROC Curve for OFFENSEMOTOR_VEHICLE_THEFT Prediction")
 
 ```
 ```{r}
-str(selected_features)
+
+
+
 ```
 
 
+```{r}
+str(data_selected)
+
+```
+```{r}
+# Get unique value
+
+# Display unique values for each column
+library(dplyr)
+library(lubridate)
+
+# Convert REPORT_DAT to Date
+data_selected$REPORT_DAT <- as.Date(data_selected$REPORT_DAT, format = "%Y-%m-%d")
+# Check for missing data
+      sum(is.na(data_selected))
+
+# Drop missing data rows for simplicity
+data_selected <- data_selected %>% drop_na()
+
+str(data_selected)
+
+```
+```{r}
+data_selected$METHODGUN <- as.factor(data_selected$METHODGUN)
+
+
+library(caret)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split the data into training (80%) and testing (20%) sets
+trainIndex <- createDataPartition(data_selected$METHODGUN, p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+
+train_data <- data_selected[trainIndex,]
+test_data  <- data_selected[-trainIndex,]
+
+
+
+library(randomForest)
+
+# Train the Random Forest model
+rf_model <- randomForest(METHODGUN ~ Month + Day + ANC + PSA + X + Y + 
+                         OFFENSEASSAULT_W_DANGEROUS_WEAPON + OFFENSEMOTOR_VEHICLE_THEFT + 
+                         OFFENSEROBBERY + WARD2 + WARD3 + WARD5 + WARD6 + WARD7 + WARD8 + 
+                         SeasonSpring + SeasonSummer + SeasonWinter, data = train_data)
+
+# Display the model summary
+print(rf_model)
+
+
+
+
+```
+
+```{r}
+# Get predicted probabilities (for ROC and AUC) on the training data
+pred_probs_train <- predict(rf_model, train_data, type = "prob")
+
+# Extract probabilities for the positive class (METHODGUN = 1)
+prob_pos_class_train <- pred_probs_train[, 2]
+
+# Calculate ROC curve for the training data
+roc_curve_train <- roc(train_data$METHODGUN, prob_pos_class_train)
+
+# Plot the ROC curve for the training data
+plot(roc_curve_train, main = "ROC Curve (Train Data)", col = "blue", lwd = 2)
+
+# Calculate AUC for the training data
+auc_value_train <- auc(roc_curve_train)
+
+# Print AUC value
+print(paste("AUC (Train Data): ", auc_value_train))
+```
+
+
+
+
+
+```{r}
+# Predictions on the test data
+predictions <- predict(rf_model, test_data)
+
+# Evaluate performance using confusion matrix
+confusionMatrix(predictions, test_data$METHODGUN)
+
+
+# Calculate accuracy
+accuracy <- mean(predictions == test_data$METHODGUN)
+print(paste("Accuracy: ", accuracy))
+
+
+# Tuning the Random Forest model (optional)
+rf_tune <- train(METHODGUN ~ Month + Day + ANC + PSA + X + Y + 
+                 OFFENSEASSAULT_W_DANGEROUS_WEAPON + OFFENSEMOTOR_VEHICLE_THEFT + 
+                 OFFENSEROBBERY + WARD2 + WARD3 + WARD5 + WARD6 + WARD7 + WARD8 + 
+                 SeasonSpring + SeasonSummer + SeasonWinter, 
+                 data = train_data, 
+                 method = "rf", 
+                 trControl = trainControl(method = "cv", number = 5))
+
+# Best model after tuning
+print(rf_tune$bestTune)
+
+
+```
+
+```{r}
+# Get predicted probabilities (not class labels)
+pred_probs <- predict(rf_model, test_data, type = "prob")
+
+# The probabilities for the positive class (METHODGUN = 1) are in the second column
+prob_pos_class <- pred_probs[, 2]
+
+# Calculate ROC curve
+roc_curve <- roc(test_data$METHODGUN, prob_pos_class)
+
+# Plot ROC curve
+plot(roc_curve, main = "ROC Curve", col = "blue", lwd = 2)
+# Calculate AUC
+auc_value <- auc(roc_curve)
+
+# Print AUC
+print(paste("AUC: ", auc_value))
+ 
+
+
+```
+
+```{r}
+# Load necessary libraries
+library(caret)
+library(pROC)
+library(randomForest)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split the data into training and test sets (80-20 split)
+train_index <- createDataPartition(data_selected$METHODGUN, p = 0.8, list = FALSE)
+train_data <- data_selected[train_index, ]
+test_data <- data_selected[-train_index, ]
+
+# Train Random Forest model
+rf_model <- randomForest(
+  METHODGUN ~ ., 
+  data = train_data,
+  ntree = 100,
+  mtry = sqrt(ncol(train_data) - 1),
+  importance = TRUE
+)
+
+# Predict on training data
+train_predictions <- predict(rf_model, train_data, type = "prob")[,2]
+train_classes <- predict(rf_model, train_data)
+
+# Predict on test data
+test_predictions <- predict(rf_model, test_data, type = "prob")[,2]
+test_classes <- predict(rf_model, test_data)
+
+# Calculate AUC for training and test data
+roc_train <- roc(train_data$METHODGUN, train_predictions)
+roc_test <- roc(test_data$METHODGUN, test_predictions)
+
+auc_train <- auc(roc_train)
+auc_test <- auc(roc_test)
+
+# Print AUC values
+cat("AUC (Train Data): ", auc_train, "\n")
+cat("AUC (Test Data): ", auc_test, "\n")
+
+# Confusion Matrices
+cat("\nConfusion Matrix (Train Data):\n")
+print(confusionMatrix(train_classes, as.factor(train_data$METHODGUN)))
+
+cat("\nConfusion Matrix (Test Data):\n")
+print(confusionMatrix(test_classes, as.factor(test_data$METHODGUN)))
+
+# Plot ROC curves
+plot(roc_train, col = "blue", main = "ROC Curve: Train vs Test")
+lines(roc_test, col = "red")
+legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty = 1)
+
+```
 
 
 
