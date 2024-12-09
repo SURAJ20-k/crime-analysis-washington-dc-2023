@@ -1865,7 +1865,86 @@ legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty =
 
 ```
 
+```{r}
+# Load required libraries
+library(randomForest)
+library(caret)
+library(ROCR)
+library(pROC)
 
+# Split the data into training and testing sets
+set.seed(42)
+train_index <- createDataPartition(data_selected$METHODGUN, p = 0.8, list = FALSE)
+train_data <- data_selected[train_index, ]
+test_data <- data_selected[-train_index, ]
+
+# Define the formula
+formula <- METHODGUN ~ .
+
+# Hyperparameter tuning with caret
+control <- trainControl(method = "cv", number = 5) # 5-fold cross-validation
+
+# Define a grid for hyperparameter tuning (only mtry allowed for randomForest)
+tune_grid <- expand.grid(
+  mtry = c(2, 4, 6) # Number of variables randomly selected at each split
+)
+
+# Train the Random Forest model
+set.seed(42)
+rf_model <- train(
+  formula,
+  data = train_data,
+  method = "rf",
+  metric = "Accuracy",
+  trControl = control,
+  tuneGrid = tune_grid
+)
+
+# Best hyperparameters
+print(rf_model$bestTune)
+
+# Final model with best parameters
+final_rf_model <- rf_model$finalModel
+
+# Evaluate model performance
+train_preds <- predict(final_rf_model, train_data)
+test_preds <- predict(final_rf_model, test_data)
+
+# Confusion matrix (train and test data)
+conf_matrix_train <- confusionMatrix(train_preds, train_data$METHODGUN)
+conf_matrix_test <- confusionMatrix(test_preds, test_data$METHODGUN)
+
+cat("\nConfusion Matrix (Train Data):\n")
+print(conf_matrix_train)
+
+cat("\nConfusion Matrix (Test Data):\n")
+print(conf_matrix_test)
+
+# ROC and AUC
+train_probs <- predict(final_rf_model, train_data, type = "prob")[, 2]
+test_probs <- predict(final_rf_model, test_data, type = "prob")[, 2]
+
+# Train ROC
+train_roc <- roc(train_data$METHODGUN, train_probs)
+auc_train <- auc(train_roc)
+
+# Test ROC
+test_roc <- roc(test_data$METHODGUN, test_probs)
+auc_test <- auc(test_roc)
+
+cat("\nTrain AUC:", auc_train, "\n")
+cat("Test AUC:", auc_test, "\n")
+
+# Plot ROC curve
+plot(train_roc, col = "blue", main = "ROC Curve")
+lines(test_roc, col = "red")
+legend("bottomright", legend = c("Train ROC", "Test ROC"), col = c("blue", "red"), lwd = 2)
+
+```
+
+```{r}
+
+```
 
 
 
