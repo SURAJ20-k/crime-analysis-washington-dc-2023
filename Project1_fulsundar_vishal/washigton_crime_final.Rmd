@@ -1486,3 +1486,160 @@ head(data)
 ```
 
 
+```{r}
+# Load necessary libraries
+library(dplyr)
+str(data)
+# Select relevant features for modeling from the 'data' dataset
+selected_features <- data %>%
+  select(`ANC`, `PSA`, `X`, `Y`, `LATITUDE`, `LONGITUDE`, 
+         `OFFENSEASSAULT W/DANGEROUS WEAPON`, 
+         `OFFENSEMOTOR VEHICLE THEFT`, 
+         `OFFENSEROBBERY`, 
+         `WARD2`, `WARD3`, `WARD5`, `WARD6`, 
+         `METHODGUN`)
+
+# Remove rows with missing values
+data_selected <- na.omit(selected_features)
+
+# Display the first few rows of the selected features DataFrame
+head(data_selected)
+
+# Optionally, save the selected features dataset to a new CSV
+write.csv(data_selected, "data_selected.csv", row.names = FALSE)
+
+
+str(data_selected)
+
+
+```
+```{r}
+
+# 1. Prepare the Data
+# Let's assume your data is named 'data_selected' and the target variable is OFFENSEMOTOR VEHICLE THEFT
+# Also, I'm assuming 'data_selected' is already cleaned (e.g., missing values removed)
+
+# Check the column names in the data_selected dataset
+colnames(data_selected)
+
+# 2. Rename the 'OFFENSEMOTOR VEHICLE THEFT' column for easier referencing
+colnames(data_selected)[colnames(data_selected) == "OFFENSEMOTOR VEHICLE THEFT"] <- "OFFENSEMOTOR_VEHICLE_THEFT"
+
+# Convert the 'OFFENSEMOTOR_VEHICLE_THEFT' column to a factor (binary classification)
+data_selected$OFFENSEMOTOR_VEHICLE_THEFT <- as.factor(data_selected$OFFENSEMOTOR_VEHICLE_THEFT)
+
+# 3. Feature Engineering (Scaling Continuous Variables)
+# Scale continuous variables (X, Y, LATITUDE, LONGITUDE) for models sensitive to scale
+scaled_data <- data_selected
+scaled_data[, c("X", "Y", "LATITUDE", "LONGITUDE")] <- scale(data_selected[, c("X", "Y", "LATITUDE", "LONGITUDE")])
+
+# 4. Split the Data into Training and Testing Sets (80% - 20%)
+set.seed(123)  # For reproducibility
+train_index <- sample(1:nrow(scaled_data), 0.8 * nrow(scaled_data))
+train_data <- scaled_data[train_index, ]
+test_data <- scaled_data[-train_index, ]
+
+# 5. Build the Model (Logistic Regression)
+# Using logistic regression to predict 'OFFENSEMOTOR_VEHICLE_THEFT'
+model <- glm(OFFENSEMOTOR_VEHICLE_THEFT ~ ANC + PSA + X + Y + LATITUDE + LONGITUDE + WARD2 + WARD3 + WARD5 + WARD6, 
+             data = train_data, 
+             family = binomial)
+
+# Summarize the model
+summary(model)
+
+# 6. Make Predictions on the Test Data
+# Get predicted probabilities
+pred_probs <- predict(model, newdata = test_data, type = "response")
+
+# Convert probabilities to binary outcome (0 or 1) using a threshold of 0.5
+predictions <- ifelse(pred_probs > 0.5, 1, 0)
+predictions <- as.factor(predictions)
+
+# 7. Evaluate the Model
+# Confusion Matrix to assess accuracy, precision, recall, and F1-score
+library(caret)
+confusion_matrix <- confusionMatrix(predictions, test_data$OFFENSEMOTOR_VEHICLE_THEFT)
+print(confusion_matrix)
+
+# Additional evaluation metrics like ROC-AUC
+library(pROC)
+roc_curve <- roc(test_data$OFFENSEMOTOR_VEHICLE_THEFT, pred_probs)
+plot(roc_curve)
+auc(roc_curve)
+
+```
+
+
+```{r}
+# 7. Evaluate the Model
+# Confusion Matrix to assess accuracy, precision, recall, and F1-score
+library(caret)
+confusion_matrix <- confusionMatrix(predictions, test_data$OFFENSEMOTOR_VEHICLE_THEFT)
+print(confusion_matrix)
+
+# Extracting accuracy from confusion matrix
+accuracy <- confusion_matrix$overall['Accuracy']
+cat("Model Accuracy: ", accuracy, "\n")
+
+```
+
+```{r}
+# Renaming columns with spaces or special characters
+colnames(data_selected) <- gsub(" ", "_", colnames(data_selected))
+colnames(data_selected) <- gsub("/", "_", colnames(data_selected))
+
+# Check the new column names
+colnames(data_selected)
+
+nrow(data_selected)
+
+library(ROSE)
+balanced_data <- ovun.sample(OFFENSEMOTOR_VEHICLE_THEFT ~ ., 
+                             data = data_selected, 
+                             method = "over", 
+                             N = nrow(data_selected))$data  # Match the sample size
+
+
+# Check the structure of the balanced data
+str(balanced_data)
+
+table(balanced_data$OFFENSEMOTOR_VEHICLE_THEFT)
+
+# Rebuild the logistic regression model with the balanced data
+model_balanced <- glm(OFFENSEMOTOR_VEHICLE_THEFT ~ ANC + PSA + X + Y + LATITUDE + LONGITUDE + 
+                     WARD2 + WARD3 + WARD5 + WARD6, data = balanced_data, family = binomial)
+
+# Model summary
+summary(model_balanced)
+
+
+# Get predicted probabilities
+pred_prob <- predict(model_balanced, type = "response", newdata = balanced_data)
+
+# Convert probabilities to predicted classes (0 or 1) using a threshold of 0.5
+pred_class <- ifelse(pred_prob > 0.5, 1, 0)
+
+
+
+# Calculate Accuracy
+accuracy <- mean(pred_class == balanced_data$OFFENSEMOTOR_VEHICLE_THEFT)
+accuracy
+
+
+library(pROC)
+
+# Compute the ROC curve and AUC
+roc_curve <- roc(balanced_data$OFFENSEMOTOR_VEHICLE_THEFT, pred_prob)
+auc(roc_curve)
+
+```
+
+```{r}
+
+
+```
+
+
+
+
