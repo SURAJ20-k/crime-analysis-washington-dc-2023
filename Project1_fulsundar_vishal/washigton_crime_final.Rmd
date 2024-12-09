@@ -1260,7 +1260,7 @@ In contrast, Ward 3 was identified as the safest area with the least occurrences
 
 
 
-# 7)-conclusion 
+# 7 -conclusion 
 
 
 This project aimed to investigate crime patterns in Washington, DC, using data from the Open Data DC portal. We focused on several key areas: identifying geographical crime hotspots, determining the most common offenses, analyzing variations in crime rates across different times of day, months, and seasons, and examining the prevalence of offenses involving firearms and knives compared to other methods.
@@ -1334,7 +1334,7 @@ data$Day <- day(data$REPORT_DAT)      # Extract day
 head(data)
 ```
 
-
+# MODEL BULDING 
 
 
 ```{r}
@@ -1357,7 +1357,7 @@ str(data)
 
 
 ```
-
+# **Lebal Encoding**
 ```{r}
 # Label Encoding for ordinal variables (e.g., SHIFT, ANC, PSA)
 data$SHIFT <- as.integer(factor(data$SHIFT))   # Label Encoding for SHIFT
@@ -1478,20 +1478,13 @@ head(data_selected)
 # Optionally, save the selected features dataset to a new CSV
 write.csv(data_selected, "data_selected.csv", row.names = FALSE)
 
-
 str(data_selected)
-
-
 ```
 ```{r}
 
 ```
 
-
-```{r}
-
-```
-
+# GLM Model- Offence of motor Vehicle Theft 
 ```{r}
 # Renaming columns with spaces or special characters
 colnames(data_selected) <- gsub(" ", "_", colnames(data_selected))
@@ -1547,6 +1540,7 @@ auc(roc_curve)
 str(data_selected)
 
 ```
+
 
 ```{r}
 
@@ -1630,11 +1624,6 @@ legend("bottomright", legend = paste("AUC =", round(auc_value, 3)), col = "blue"
 
 
 ```{r}
-
-
-
-```
-```{r}
 # Get unique value
 
 # Display unique values for each column
@@ -1652,7 +1641,7 @@ data_selected <- data_selected %>% drop_na()
 str(data_selected)
 
 ```
-#model 1-1 
+# model Method_GUN RF
 ```{r}
 # Load necessary libraries
 library(caret)
@@ -1717,7 +1706,7 @@ legend("bottomright", legend = c("Train", "Test"), col = c("blue", "red"), lty =
 ```
 
 
-# model1
+# model Random_forest 
 ```{r}
 # Load necessary libraries
 library(caret)
@@ -1793,16 +1782,7 @@ legend(
 ```
 
 
-
-#model 2
-```{r}
-
-
-
-```
-
-
-
+# ANNOVA test for model selection 
 ```{r}
 # Sample data: accuracy values for Model 1 and Model 3 for train and test sets
 accuracy_model1_train <- c(0.983)  # Example values for Model 1 (train)
@@ -1854,8 +1834,10 @@ df <- data.frame(
 
 
 ```
-# result 
+# **result** 
 no significant difference between the models, you can conclude that Model 1 and Model 3 are statistically similar in terms of accuracy based on the current data and metrics used.
+
+# forecasting 
 
 ```{r}
 # Load necessary libraries
@@ -1885,14 +1867,7 @@ str(data_selected)
 
 ```
 
-```{r}
-
-
-
-```
-
-
-
+# ETS model
 ```{r}
 
 # Fit the ETS model
@@ -1923,6 +1898,8 @@ forecast_ets_monthly
 
 
 ```
+# Sarima Model
+
 ```{r}
 library(forecast)
 
@@ -1947,27 +1924,10 @@ sarima_forecast
 
 
 ```
+# forecasting Crime Trends 
 
 ```{r}
 
-
-
-
-```
-
-
-```{r}
-gun_data <- crime_data2 %>% filter(METHOD == "GUN")
-
-```
-
-
-```{r}
-summary(gun_data)
-
-```
-
-```{r}
 # Assuming `data_selected` contains latitude and longitude for each crime event
 library(dplyr)
 library(ggplot2)
@@ -2071,6 +2031,24 @@ ggplot(forecast_data, aes(x = Date, y = Forecast)) +
 
 ```
 
+
+
+
+#EDA-GUN 
+```{r}
+gun_data <- crime_data2 %>% filter(METHOD == "GUN")
+
+```
+
+
+```{r}
+summary(gun_data)
+
+```
+
+```{r}
+```
+#EDA 
 
 ```{r}
 
