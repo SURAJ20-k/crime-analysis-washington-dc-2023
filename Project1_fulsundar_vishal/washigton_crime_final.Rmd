@@ -1538,6 +1538,7 @@ auc(roc_curve)
 
 ```{r}
 str(data_selected)
+head(data_selected)
 
 ```
 
@@ -2130,7 +2131,7 @@ library(forecast)
 sarima_model <- auto.arima(crime_ts, seasonal = TRUE)
 
 # Forecast the next 24 months (2024 and 2025)
-sarima_forecast <- forecast(sarima_model, h = 24)
+sarima_forecast <- forecast(sarima_model, h = 48)
 
 # Create a data frame for the forecasted values and dates
 forecast_data <- data.frame(
@@ -2249,20 +2250,9 @@ ggplot(gun_data, aes(x = LONGITUDE, y = LATITUDE)) +
 
 ```
 ```{r}
-gun_data %>%
-  filter(Year == 2023) %>%  # Filter for the year 2023
-  group_by(Month) %>%      # Group by month
-  summarise(Count = n()) %>%  # Summarize the count of crimes
-  arrange(match(Month, month.abb)) %>%  # Arrange months in proper order
-  ggplot(aes(x = Month, y = Count, fill = Month)) +
-  geom_bar(stat = "identity") +  # Create a bar plot
-  labs(
-    title = "Gun-Related Crimes in 2023 by Month",
-    x = "Month",
-    y = "Count"
-  ) +
-  theme_minimal() +  # Use a minimal theme
-  scale_fill_brewer(palette = "Set3")  # Add a color palette
 
+
+```
+```{r}
 ```
 
