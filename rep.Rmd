@@ -1,0 +1,610 @@
+---
+title: "Crime Analysis in Washington, DC (2023)"
+author: 'Group 1: Naiska Buyandalai, Halima Al Balushi, Vishal Fulsundar, Suraj Kapare'
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    number_sections: True
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(results="markup", warning = F, message = F)
+# Can globally set option for number display format.
+options(scientific=T, digits = 3) 
+# options(scipen=9, digits = 3) 
+```
+
+# Introduction
+Safety is a big concern for individuals, particularly when choosing a place to live, work, or travel. Questions like "Is this neighborhood safe?" often come up when deciding on an apartment, planning a move, or even just exploring a new area. <br>
+
+Our project focuses on understanding crime patterns in Washington, DC, using a dataset from the Open Data DC portal. The dataset, "Crime Incidents in 2023," includes 34,215 reported crimes with details about the type of offense, when and where it happened, and how it occurred. With this dataset, we aimed to explore crime density across the city, identify key factors related to criminal activity, and better understand how crime trends change over time and across locations. <br>
+
+To tackle these questions, we conducted Exploratory Data Analysis (EDA) to uncover patterns and built statistical models to explore the relationship between different factors and crime rates. By doing so, we hope to provide insights that can help law enforcement allocate resources more effectively and empower residents to make informed decisions about their safety.
+
+Research questions we aimed to answer in this project:
+<br>
+
+1. How do crime rates fluctuate throughout the year? Are there specific time periods when crime incidents increase? <br>
+
+2. What are the geographical crime hotspots in Washington, DC, based on neighborhood clusters and wards? <br>
+
+3. How do crime rates vary across different shifts (morning, evening, midnight)? <br>
+
+3. How does the presence of nightlife facility affect crime rates? <br>
+
+4. What are the key indicators of crime in Washington, DC? Which ones exhibit the strongest relationship with crime rates?  <br>
+
+
+
+# Dataset Source
+
+Dataset: [Crime Incidents in 2023](https://opendata.dc.gov/datasets/DCGIS::crime-incidents-in-2023/explore?showTable=true) 
+
+This dataset serves as the primary source for our analysis, encompassing 34,215 reported crime incidents in Washington, DC. It includes critical information such as the type of offense, time of occurrence, geographic location, and methods involved. This comprehensive dataset is essential for examining crime patterns and densities across different neighborhoods.
+
+Dataset: [Neighborhood Clusters](https://catalog.data.gov/dataset/neighborhood-clusters/resource/39d2cb14-5d10-4ac2-916e-f5b78670fcb9?inner_span=True) 
+
+This dataset provides a mapping of numerical identifiers for neighborhoods to more recognizable names, such as Columbia Heights, Georgetown, and Dupont Circle. By integrating this data, we enhance the interpretability of our analysis, making it easier for stakeholders to understand the geographic context of crime data.
+
+Dataset: [DC Night Club Data](https://opendata.dc.gov/datasets/DCGIS::night-club/explore?location=38.913826%2C-77.019535%2C11.78&showTable=true)
+
+This dataset provides the locations of nightlife facilities across Washington, DC. By incorporating this information, we can analyze how proximity to nightlife establishments correlates with crime rates in different neighborhoods. This analysis offers valuable additional insights into potential patterns of criminal activity and highlights areas that may benefit from increased safety measures or law enforcement coverage.
+
+Dataset: [DC Ward Data](https://go.gwu.edu/dcwarddata)
+
+This dataset contains population of each wards in Washington, DC. It was utilized to analyze crime rates per capita within these wards.
+
+# Data Preprocessing
+## Data Overview
+The "Crime Incidents in 2023" dataset had total of 34215 observations and 25 variables.
+
+```{r}
+#Libraries utilized to complete the project
+library(dplyr)
+library(ezids)
+library(lubridate)
+library(tigris)
+library(ggthemes)
+library(ggplot2)
+library(sf)
+library(treemapify)
+library(gridExtra)
+library(patchwork)
+library(geosphere)
+library(rpart)
+library(rpart.plot)
+library(caret)
+library(rpart.plot)
+library(Metrics)
+```
+
+```{r}
+# Loading the crime dataset
+crime_data <- read.csv('Crime_Incidents_in_2023.csv')
+xkabledplyhead(crime_data, title = 'First 5 Rows of the Crime Dataset')
+str(crime_data)
+```
+
+
+```{r}
+xkablesummary(crime_data, title = 'Summary Statistics of the Crime Dataset')
+```
+
+The summary statistics indicate several key insights into the structure and contents of the initial crime dataset: <br>
+
+**Date Variables (`REPORT_DAT`, `START_DATE`, `END_DATE`):**
+These date-related fields are currently listed as characters rather than dates. This formatting issue will need correction for time-based analysis.
+
+**Categorical Variables (`SHIFT`, `METHOD`, `OFFENSE`, `WARD`, etc.):**
+Many of these fields were treated as character variables. These categorical variables need to be converted to factors or other appropriate data types for better analysis.
+
+**Missing Values:**
+Some fields, such as `WARD`, `DISTRICT`, `NEIGHBORHOOD_CLUSTER`, `BLOCK_GROUP`, `CENSUS_TRACT`, and `VOTING_PRECINCT`, contain missing values. This could impact any spatial analysis and require imputation or removal of rows with missing values, depending on their significance.
+
+
+**Loading additional datasets**<br>
+The initial crime dataset lacks neighborhood cluster names, making it difficult to identify specific neighborhoods based solely on cluster numbers. To provide clearer insights for the audience, we incorporated a neighborhood cluster dataset that includes neighborhood names, allowing for easier interpretation and understanding of the areas involved.
+
+```{r}
+cluster <- read.csv('Neighborhood_Clusters.csv')
+cluster <- cluster %>% 
+  select(NAME, NBH_NAMES)
+xkabledplyhead(cluster, title = 'Neighborhood Cluster Names')
+```
+
+To analyze the potential impact of night life presence on crime rates, we incorporated a dataset containing night life facility locations. Furthermore, utilizing the `XCOORD` and `YCOORD` columns, we've calculated the longitude and latitude of the location and stored them as columns in the dataset.
+
+```{r}
+night_data <- read_sf('Night_Club.geojson')
+night_sf <- st_as_sf(night_data, coords = c("XCOORD", "YCOORD"), crs = 2248)
+# Transform coordinates to WGS84 (EPSG:4326)
+night_sf_transformed <- st_transform(night_sf, crs = 4326)
+# Extract the transformed coordinates and add them back to the data frame
+night_data$longitude <- st_coordinates(night_sf_transformed)[, 1]
+night_data$latitude <- st_coordinates(night_sf_transformed)[, 2]
+night_data <- night_data %>% 
+  select(-c(SE_ANNO_CAD_DATA,	CREATOR,	CREATED,	EDITOR,	EDITED	))
+xkabledplyhead(night_data, title = 'Night Life Facility Dataset')
+```
+
+```{r}
+ward_df <- read.csv('warddata.csv')
+ward_df <- ward_df %>% 
+  rename(total_population = DP05_0001E) %>% 
+  select(c('NAMELSAD', 'total_population'))
+xkabledplyhead(ward_df, nrow(ward_df),title = 'DC Ward Population Dataset')
+```
+
+
+## Data Cleaning
+```{r}
+colSums(is.na(crime_data))
+sum(crime_data$BID == "" | crime_data$BID == " ")
+```
+
+
+
+The `OCTO_RECORD_ID` column contains only `NA` values, while the `BID` column, although lacking `NA` entries, has 28,036 empty values. As these columns provide no meaningful information, they were excluded from the analysis.
+
+```{r}
+crime_data_clean <- crime_data %>% 
+  select(-OCTO_RECORD_ID, -BID) %>% 
+  mutate(WARD = paste("Ward", WARD)) %>% 
+  mutate(across(c(SHIFT, METHOD, OFFENSE, WARD, ANC, DISTRICT, NEIGHBORHOOD_CLUSTER, VOTING_PRECINCT), as.factor)) %>% 
+  mutate(across(c(REPORT_DAT, START_DATE, END_DATE), ~ ymd_hms(.x, tz = "America/New_York")))
+
+crime_data_clean <- na.omit(crime_data_clean)
+
+xkablesummary(crime_data_clean, title = 'Summary Statistics of the Cleaned Dataset')
+```
+
+
+After assigning the correct data types to each column, the summary statistics revealed entries from years other than 2023 in this dataset. These entries will be excluded from the analysis.
+
+```{r}
+# Omitting the crime records that didn't happen in 2023
+crime_data_clean <- crime_data_clean %>% 
+  filter(year(START_DATE) >= 2023, year(END_DATE) >= 2023)
+```
+
+
+Additionally, we merged the Neighborhood Cluster dataset with our cleaned data to support further analysis.
+
+```{r}
+crime_data_clean <- crime_data_clean %>% 
+  left_join(cluster, by = c("NEIGHBORHOOD_CLUSTER" = "NAME"))
+
+xkabledplyhead(crime_data_clean, title = 'Cleaned Crime Dataset')
+```
+
+# Exploratory Data Analysis
+## Crime Distribution Throughout the Year
+```{r}
+crime_data_clean <- crime_data_clean %>%
+  mutate(Month = factor(month(START_DATE, label = TRUE), levels = month.abb, ordered = TRUE))
+
+crime_by_month <- crime_data_clean %>%
+  group_by(Month) %>%
+  summarise(Crime_Count = n()) %>%
+  arrange(Month)
+
+ggplot(crime_by_month, aes(x = Month, y = Crime_Count, group = 1)) +  # group = 1 for continuous line
+  geom_line(color = 'blue', size = 1) +
+  geom_point(color = 'red', size = 2) +
+  labs(title = "Crime Distribution by Month", x = "Month", y = "Number of Crimes") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+The line plot shows the distribution of crime by month in 2023. It is evident that July experienced the highest crime count of the year. Additionally, other warmer months, such as May, June, and August, also have relatively higher crime counts compared to other months. An unusually high spike in October is also notable. To gain further insights, we examined the crime counts by shift within each month.
+
+
+```{r}
+ggplot(crime_data_clean, aes(x = Month, fill=SHIFT)) +
+  geom_bar(position = 'dodge') +
+  labs(title = "Crime Distribution by Month and Shift",
+       x = "Month",
+       y = "Number of Crimes") +
+  scale_fill_manual(values = c("DAY" = "lightblue",    
+                               "EVENING" = "orange",  
+                               "MIDNIGHT" = "navy")) +  
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.title = element_blank())
+```
+
+The crime distribution showed only slight fluctuations during the `DAY` and `EVENING` shifts. However, crime incidents during the `MIDNIGHT` shift increased significantly during the warmer months and then declined as the weather cooled. This pattern could explain the higher crime rates in warmer months, as people are more likely to go out at night when temperatures are mild. Warmer weather often brings more social gatherings and outdoor activities, leading to increased interactions and potentially higher crime rates during nighttime hours.
+
+```{r}
+crime_oct <- crime_data_clean %>% 
+  filter(Month == "Oct") %>% 
+  mutate(day  = day(START_DATE)) %>% 
+  group_by(day) %>% 
+  summarise(Crime_Count = n())
+
+ggplot(crime_oct, aes(x = day, y=Crime_Count)) +
+  geom_line(color = 'blue', size=1) +
+  geom_point(color='red', size=2) +
+  labs(title = "Crime Distribution in October",
+       x = "Day",
+       y = 'Number of Crimes') +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20)) 
+```
+
+To investigate the unusual spike in October’s crime rate, we examined crime distribution by day within the month and visualized it in a line plot. Initially, we considered Halloween as a potential cause for the increase, but the analysis showed no significant rise in crime near Halloween. Instead, the highest crime counts in October occurred on the 22nd, followed by the 21st.
+
+
+During our exploration of events in Washington, DC, on October 21st and 22nd, 2023, we identified that the ***Rock the Park DC WKNDR 2023*** festival took place at **1315 I Street NW** on both days. Given that it was a tax-free dance music festival, we anticipate that the number of participants was substantial.
+
+```{r}
+crime_oct_22 <- crime_data_clean %>% 
+  filter(Month == "Oct" & day(START_DATE) == 22) %>% 
+  group_by(NEIGHBORHOOD_CLUSTER, NBH_NAMES) %>% 
+  summarise(crime_count = n()) %>%              
+  arrange(desc(crime_count))
+
+xkabledplyhead(crime_oct_22, title = '5 Neighborhood Clusters with Highest Crimes on October 22nd')
+```
+
+```{r}
+crime_oct_22_add <- crime_data_clean %>% 
+  filter(Month == "Oct" & day(START_DATE) == 22 & NEIGHBORHOOD_CLUSTER %in% c("Cluster 2", 
+                                                                            "Cluster 3",
+                                                                            "Cluster 18",
+                                                                            "Cluster 6",
+                                                                            "Cluster 1")) %>% 
+  select(NEIGHBORHOOD_CLUSTER, BLOCK) %>% 
+  rename(CLUSTER = NEIGHBORHOOD_CLUSTER)
+
+xkabledplyhead(crime_oct_22_add, 10, title = "Blocks in Highest Crime Clusters on Oct 22nd")
+```
+
+We filtered the data to identify the top five neighborhood clusters with the highest crime rates and compiled their addresses. A total of `r nrow(crime_oct_22_add)` crimes occurred in these five neighborhoods, all located in the Northwest (NW) area of Washington, DC. Notably, the dance music festival also took place in the NW area, which could potentially explain the spike in crime on the 22nd.
+
+## Crime Density by Location
+```{r}
+ward_crime_p <- ggplot(crime_data_clean, aes(x = WARD)) +
+  geom_bar(fill = "steelblue", color = 'black') +
+  labs(title = "Crime Distribution by Count VS Per Capita", x = "Ward", y = "Number of Crimes") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+ward_crime_counts <- crime_data_clean %>%
+  group_by(WARD) %>%
+  summarise(offense_count = n()) 
+
+crime_per_capita <- ward_crime_counts %>%
+  left_join(ward_df, by = c("WARD" = "NAMELSAD")) %>% 
+  mutate(crime_rate_per_capita = offense_count / total_population)
+
+
+ward_crime_pop_p <- ggplot(crime_per_capita, aes(x = WARD, y = crime_rate_per_capita)) +
+  geom_bar(stat = "identity", fill = "darkgreen", color = 'black') +
+  labs(title = ' ', x = "Ward", y = "Crime Rate Ward Pop.") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20),
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+grid.arrange(ward_crime_p, ward_crime_pop_p, ncol = 2)
+```
+
+
+In 2023, Wards 2 and 5 recorded the highest crime counts, followed closely by Ward 1. However, given the varying populations across wards, we opted to compare the crime rate per capita. This analysis reveals that Ward 2 has the highest crime rate, followed by Ward 1 and Ward 5.
+
+
+
+To enhance visualization, we have mapped Washington, DC, displaying both crime counts and crime rates per capita by ward.
+
+```{r, results = 'hide'}
+# Retreiving DC wards' geographical dataset to plot maps 
+dc_wards <- state_legislative_districts(state = "dc")
+dc_ward_crime <- dc_wards %>% 
+  left_join(ward_crime_counts, by = c("NAMELSAD" = "WARD"))
+```
+
+```{r}
+ward_map <- ggplot(dc_ward_crime) +
+  geom_sf(aes(fill = offense_count),
+          color = "black") +
+  geom_sf_label(aes(label = paste0(NAMELSAD, 
+                                   "\n",
+                                   offense_count))) +
+  scale_fill_gradient(low = "lightyellow", high = "red") +
+  labs(title = 'DC Crime Density Map with Count and Per Capita by Wards',
+       fill = "Crime Density") +
+  theme_map() +
+  theme(plot.title = element_text(face = "bold", size = 15))
+
+dc_ward_crime_pop <- dc_wards %>% 
+  left_join(crime_per_capita, by = c("NAMELSAD" = "WARD"))
+
+# Plotting the crime density map using crime per capita
+ward_map_pop <- ggplot(dc_ward_crime_pop) +
+  geom_sf(aes(fill = crime_rate_per_capita), color = "black") +  
+  geom_sf_label(aes(label = paste0(NAMELSAD, "\n", 
+                                    round(crime_rate_per_capita, 2)))) + 
+  scale_fill_gradient(low = "lightyellow", high = "red") +
+  labs(title = ' ',
+       fill = "Crime Rate per Capita") +
+  theme_map() +
+  theme(plot.title = element_text(face = "bold", size = 15))
+
+grid.arrange(ward_map, ward_map_pop, ncol = 2)
+```
+
+
+To provide precise crime locations, we used the `LONGITUDE` and `LATITUDE` columns in our dataset to plot areas with higher and lower crime counts. Additionally, to examine the impact of night life  presence, we overlaid the 62 police stations in DC onto our crime density map. 
+
+```{r}
+ggplot() +
+  geom_hex(data = crime_data_clean, aes(x = LONGITUDE, y = LATITUDE), bins = 30) +  # Crime density
+  scale_fill_gradient(low = "lightyellow", high = "red") +  
+  geom_point(data = night_data, aes(x = longitude, y = latitude), color = "blue", size = 1, stroke = 1, alpha = 0.7, shape = 4) +
+  geom_sf(data = dc_wards, fill = NA, color = "black", size = 1.2) +
+  labs(title = "Crime Density Map with Nightlife Facility Points", 
+       x = "Longitude", 
+       y = "Latitude",
+       fill = 'Crime Density') +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 15),
+        panel.grid = element_blank())
+```
+
+
+Our analysis suggests that the presence of nightlife facilities may be a contributing factor to higher crime rates, as these establishments are often located in areas with a high density of reported crimes.
+
+## Analysis on Offense by Shift
+
+```{r}
+ggplot(crime_data_clean) +
+  geom_bar(aes(x=SHIFT),
+           fill = "steelblue",
+           color='black') +
+  labs(title = "Crime Distribution by Shift", x = "Shift", y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 15))
+
+crime_by_shift <- crime_data_clean %>% 
+  group_by(SHIFT) %>% 
+  summarise(Crime_Count = n())
+
+xkabledplyhead(crime_by_shift, 3, title = "Crime Count by Shift")
+```
+
+
+Initially, we assumed that crime rates would peak during midnight hours. However, our analysis reveals that crime occurrences are actually higher during the day, likely due to increased public presence. Further examination, though, indicates that during the midnight shift, there is a rise in "more severe" crimes and those involving weapons.
+
+```{r}
+ggplot(crime_data_clean, aes(x=SHIFT, fill=OFFENSE)) +
+  geom_bar(position = 'dodge') +
+  labs(title = 'Crime Count by Shift and Offense Type',
+       x = 'Shift',
+       y = 'Count') +
+  scale_fill_brewer(palette = "Set1") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 15),
+        legend.title = element_blank())
+```
+
+
+```{r}
+ggplot(crime_data_clean, aes(x = SHIFT, fill = METHOD)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Distribution of Offense Methods by Shift", x = "Shift", y = "Count") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 15))
+```
+
+
+
+# Statistical Test and Modeling 
+## Comparison of Crime Rate During Warm and Cool/Cold Months 
+We initially assumed that crime rates are higher in the warmer summer months compared to the cooler months of the year. For this analysis, we categorized May, June, July, and August as warmer months and the remaining months as cooler. Based on this assumption, we conducted a t-test to compare the mean crime counts between warmer and cooler months.<br>
+
+**H0:** μWarm = μNot Warm <br>
+**H1:** μWarm ≠ μNot Warm <vr>
+```{r}
+# Comparing warm and cold/chill months
+crime_by_month <- crime_by_month %>%
+  mutate(Weather = ifelse(Month %in% c("May", "Jun", "Jul", "Aug"), "Warm", "Not Warm"))
+
+# Checking the Normality of Crime Count
+qqnorm(crime_by_month$Crime_Count, main = "Q-Q Plot of Crime Count")
+qqline(crime_by_month$Crime_Count)
+
+# Shapiro-Wilk Test for Normality
+shapiro.test(crime_by_month$Crime_Count)
+
+# Perform T-Test
+t_test_result <- t.test(Crime_Count ~ Weather, data = crime_by_month)
+t_test_result
+```
+
+The t-test shows a statistically significant difference. The p-value is 0.001, which is much smaller than the significance level of 0.05. This indicates a statistically significant difference in crime counts between warm and cool/cold months. The 95% confidence interval for the difference in means ranges from -721 to -265, which does not include 0, reinforcing that the difference is statistically significant.
+
+
+Since the p-value is very low, we can reject the null hypothesis that there is no difference in crime counts between warm and cool/cold months. The data suggests that crime counts are significantly higher during warmer months. This finding aligns with the common trend where warmer months often see higher crime rates, possibly due to increased outdoor activities and interactions.
+
+## Association Between Month and Shift
+Our second hypothesis posits an association between the month and the time of day when crimes occur. This hypothesis supports the assumption that during the warmer months, crime rates are higher during the midnight hours.
+
+
+**H0:** Month and Shift are independent <br>
+**H1:** Month and Shift are not independent <br>
+```{r}
+table_month_shift <- table(crime_data_clean$Month, crime_data_clean$SHIFT)
+chisq.test(table_month_shift)
+```
+
+
+The results of the Pearson's Chi-squared test provide strong evidence against the null hypothesis, which states that month and shift are independent. The test yielded a chi-squared statistic of 156 with 22 degrees of freedom and a p-value of less than 2e-16. This p-value is significantly lower than the conventional threshold of 0.05, indicating that there is a statistically significant association between the month and the time of day when crimes occur.
+
+This result supports our assumption that crime rates are higher during the midnight hours in the warmer months. This suggests that as temperatures rise, there may be an increase in criminal activity occurring late at night.
+
+
+## Random Forest Regression
+
+To identify the key factors influencing crime rates in Washington, DC, we developed a Random Forest regression model. Since each observation in the dataset represents a single crime incident, we preprocessed the data by aggregating it based on ward, month, and shift.
+
+
+```{r}
+crime_coords <- as.matrix(crime_data_clean[, c("LONGITUDE", "LATITUDE")])
+night_data <- night_data %>%
+  st_drop_geometry()
+night_coords <- as.matrix(night_data[, c("longitude", "latitude")])
+distance_matrix <- distm(crime_coords, night_coords, fun = distHaversine)
+nearest_distance <- apply(distance_matrix, 1, min)
+# Add distance to the crime dataset
+crime_data_clean <- crime_data_clean %>%
+  mutate(Nearest_NightClub_Distance = nearest_distance)
+
+ward_df <- ward_df %>% 
+  rename(Ward_Population = total_population)
+crime_data_clean <- left_join(crime_data_clean, ward_df, by = c("WARD" = "NAMELSAD"))
+
+crime_aggregated_ward <- crime_data_clean %>%
+  group_by(WARD, Month, SHIFT) %>%
+  summarize(
+    Crime_Count = n(),  # Target variable
+    Ward_Population = first(Ward_Population),
+    Avg_NightClub_Distance = mean(Nearest_NightClub_Distance, na.rm = TRUE),
+    .groups = 'drop')
+xkabledplyhead(crime_aggregated_ward, title = 'Aggregated Crime Dataset')
+```
+
+Additionally, we examined the distribution of crime counts in the preprocessed data by generating a histogram, creating a Q-Q plot, and performing a Shapiro-Wilk normality test. The results indicate that the crime count of the dataset prepared for the model follows a normal distribution.
+
+
+```{r}
+ggplot(crime_aggregated_ward) +
+  geom_histogram(aes(x=Crime_Count), fill = 'darkgreen', color = 'black') +
+  labs(title = 'Crime Count distribution',
+       x = 'Crime', y = 'Count') +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 20))
+```
+
+```{r}
+qqnorm(crime_aggregated_ward$Crime_Count, main = "Q-Q Plot of Crime Count")
+qqline(crime_aggregated_ward$Crime_Count)
+shapiro_test <- shapiro.test(crime_aggregated_ward$Crime_Count)
+shapiro_test
+```
+
+
+After testing various variables, we identified that the Ward Population, Shift of the Day, Month, and Average Distance from a Nightlife Facility (in meters) are the most significant factors influencing crime count in Washington, DC. <br>
+
+The results from the Decision Tree Regression Model reveal several key insights: <br>
+
+- Midnight shifts experience fewer crimes compared to other shifts. <br>
+- Crime occurrences decrease as the distance from nightlife facilities increases. <br>
+- Higher ward populations are associated with an increase in crime counts. <br>
+
+These findings are consistent with our previous findings through EDA and highlights the importance of population density and proximity to nightlife establishments in understanding crime patterns. However, the model suggests that the Month is the least important indicator from the features mentioned before.
+
+
+
+```{r}
+train_index <- createDataPartition(crime_aggregated_ward$Crime_Count, p = 0.8, list = FALSE)
+train_data <- crime_aggregated_ward[train_index, ]
+test_data <- crime_aggregated_ward[-train_index, ]
+
+tree_model <- rpart(Crime_Count ~ Ward_Population + Avg_NightClub_Distance + Month +SHIFT, 
+                    data = train_data, method = "anova")
+feature_importance <- tree_model$variable.importance
+rpart.plot(tree_model, type = 2, extra = 101, under = TRUE, tweak = 1.2, )
+```
+
+
+```{r}
+predictions <- predict(tree_model, test_data)
+mae_val <- mae(test_data$Crime_Count, predictions)
+rmse_val <- rmse(test_data$Crime_Count, predictions)
+rsq <- 1 - sum((test_data$Crime_Count - predictions)^2) / sum((test_data$Crime_Count - mean(test_data$Crime_Count))^2)
+print(paste("MAE:", mae_val, "RMSE:", rmse_val, "R-squared:", rsq))
+
+```
+
+```{r}
+importance_df <- data.frame(
+  Feature = names(feature_importance),
+  Importance = feature_importance)
+
+ggplot(importance_df, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "steelblue", color = 'black') +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Feature Importance", x = "Features", y = "Importance") +
+  theme(plot.title = element_text(face = "bold", size = 20))
+```
+
+```{r}
+print(tree_model$cptable)
+plotcp(tree_model)
+```
+
+```{r}
+optimal_cp <- tree_model$cptable[which.min(tree_model$cptable[, "xerror"]), "CP"]
+pruned_tree <- prune(tree_model, cp = optimal_cp)
+rpart.plot(pruned_tree, type = 2, extra = 101, under = TRUE, tweak = 1.2)
+predictions <- predict(pruned_tree, test_data)
+mae_val <- mae(test_data$Crime_Count, predictions)
+rmse_val <- rmse(test_data$Crime_Count, predictions)
+rsq <- 1 - sum((test_data$Crime_Count - predictions)^2) / sum((test_data$Crime_Count - mean(test_data$Crime_Count))^2)
+print(paste("MAE:", mae_val, "RMSE:", rmse_val, "R-squared:", rsq))
+
+```
+
+```{r}
+tree_model_tuned <- rpart(Crime_Count ~ Ward_Population + Avg_NightClub_Distance + Month + SHIFT, 
+                          data = train_data, method = "anova", 
+                          control = rpart.control(minsplit = 10, minbucket = 5, maxdepth = 5))
+rpart.plot(tree_model_tuned, type = 2, extra = 101, under = TRUE, tweak = 1.2)
+
+predictions <- predict(tree_model_tuned, test_data)
+mae_val <- mae(test_data$Crime_Count, predictions)
+rmse_val <- rmse(test_data$Crime_Count, predictions)
+rsq <- 1 - sum((test_data$Crime_Count - predictions)^2) / sum((test_data$Crime_Count - mean(test_data$Crime_Count))^2)
+print(paste("MAE:", mae_val, "RMSE:", rmse_val, "R-squared:", rsq))
+
+```
+
+```{r}
+lm_model <- lm(Crime_Count ~ Avg_NightClub_Distance + SHIFT + Ward_Population, data = crime_aggregated_ward)
+summary(lm_model)
+```
+
+# Key Findings
+
+**Crime Trends:** Our analysis indicates that theft is the predominant type of crime in Washington, DC. Seasonal variations were evident, with significant spikes in crime during the summer months, particularly in July, likely due to increased outdoor activities and population density.<br>
+
+**Impact of Events:** We observed a rise in crime rates in October 2023, coinciding with the "Rock the Park" event. This correlation highlights the need for enhanced security measures during large public gatherings, as such events can create opportunities for theft and other offenses. <br>
+
+**Temporal Patterns:** The majority of crimes occurred during the evening hours, suggesting that law enforcement should increase visibility and patrols during these peak times, especially in identified crime hotspots.<br>
+
+**Clusters and Wards:** In our analysis, we divided Washington, DC, into clusters and wards to better understand regional crime dynamics. Notably, Ward 3 emerged as the safest area, while Wards 2 and 5 recorded significantly higher crime rates. This finding suggests that crime prevention efforts may need to be tailored to specific wards, particularly in areas experiencing elevated crime levels. <br>
+
+**Limitations:** While this study provides valuable insights, it is important to acknowledge certain limitations. The analysis relies on reported crime data, which may not capture unreported incidents. Additionally, external factors such as socio-economic conditions could influence crime rates and were not accounted for in this analysis. Our dataset also lacks information on the residency status of offenders, limiting our ability to assess whether crimes are committed by local residents or tourists. Future research should consider incorporating qualitative data to provide a more comprehensive view of the factors influencing crime. <br>
+
+
+# Conclusion
+This project aimed to investigate crime patterns in Washington, DC, using data from the Open Data DC portal. We focused on several key areas: identifying geographical crime hotspots, determining the most common offenses, analyzing variations in crime rates across different times of day, months, and seasons, and examining the prevalence of offenses involving firearms and knives compared to other methods. <br>
+
+Our analysis revealed that theft is the most common crime, with significant increases during the summer months, particularly in July, and around major public events like "Rock the Park." By categorizing the city into neighborhoods and wards, we found that Ward 3 is the safest area, while Wards 2 and 5 experience notably higher crime rates. This geographic information is essential for law enforcement and community members, as it helps inform resource allocation and safety strategies. <br>
+
+Regarding weapon use, we discovered that most crimes involved either no weapon or other types of weapons, rather than firearms and knives. Furthermore, our analysis indicated that crimes predominantly occur during the evening hours, emphasizing the need for increased police presence during these times to deter criminal activity effectively. <br>
+
+Understanding these crime dynamics is crucial for residents and visitors alike. By offering insights into crime trends and the methods used in these offenses, we hope to empower individuals to make informed decisions about their safety and living environments. Moving forward, ongoing research into the demographics of offenders and the effectiveness of various crime prevention strategies will be vital in promoting a safer Washington, DC for everyone.
+
+
+
+
