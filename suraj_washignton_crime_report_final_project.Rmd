@@ -20,3 +20,26 @@ balanced_data <- ovun.sample(OFFENSEMOTOR_VEHICLE_THEFT ~ .,
 str(balanced_data)
 
 table(balanced_data$OFFENSEMOTOR_VEHICLE_THEFT)
+
+
+
+# Rebuild the logistic regression model with the balanced data
+model_balanced <- glm(OFFENSEMOTOR_VEHICLE_THEFT ~ ANC + PSA + X + Y + LATITUDE + LONGITUDE + 
+                     WARD2 + WARD3 + WARD5 + WARD6, data = balanced_data, family = binomial)
+
+# Model summary
+summary(model_balanced)
+
+
+# Get predicted probabilities
+pred_prob <- predict(model_balanced, type = "response", newdata = balanced_data)
+
+# Convert probabilities to predicted classes (0 or 1) using a threshold of 0.5
+pred_class <- ifelse(pred_prob > 0.5, 1, 0)
+
+
+
+# Calculate Accuracy
+accuracy <- mean(pred_class == balanced_data$OFFENSEMOTOR_VEHICLE_THEFT)
+accuracy
+
