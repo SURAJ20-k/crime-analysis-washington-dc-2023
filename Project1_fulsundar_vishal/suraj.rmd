@@ -1,0 +1,22 @@
+# GLM Model- Offence of motor Vehicle Theft 
+```{r}
+# Renaming columns with spaces or special characters
+colnames(data_selected) <- gsub(" ", "_", colnames(data_selected))
+colnames(data_selected) <- gsub("/", "_", colnames(data_selected))
+
+# Check the new column names
+colnames(data_selected)
+
+nrow(data_selected)
+
+library(ROSE)
+balanced_data <- ovun.sample(OFFENSEMOTOR_VEHICLE_THEFT ~ ., 
+                             data = data_selected, 
+                             method = "over", 
+                             N = nrow(data_selected))$data  # Match the sample size
+
+
+# Check the structure of the balanced data
+str(balanced_data)
+
+table(balanced_data$OFFENSEMOTOR_VEHICLE_THEFT)
